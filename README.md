@@ -2,7 +2,7 @@
 
 **Reputation-Powered DAO Governance & Freelance Marketplace**
 
-Built for the [FairScale Hackathon](https://superteam.fun) - Where reputation is the new currency.
+<!-- Built for the [FairScale Hackathon](https://superteam.fun) - Where reputation is the new currency. -->
 
 ---
 
@@ -243,16 +243,16 @@ RepEngine uses FairScale's privacy-first reputation infrastructure to:
 
 📱 **Install as PWA** - Visit the URL on mobile and add to home screen!
 
-### Free Deployment Options
+<!-- ### Free Deployment Options
 
 RepEngine can be deployed to these **100% free** platforms:
 
 1. **Railway** (Recommended) - 500 hours/month free
 2. **Render** - Free tier with auto-sleep
 3. **Fly.io** - Free tier with 3 shared CPUs
-4. **Azure App Service** - Free F1 tier
+4. **Azure App Service** - Free F1 tier -->
 
-See [DEPLOYMENT_GUIDE.md](.hackathon/DEPLOYMENT_GUIDE.md) for detailed instructions.
+<!-- See [DEPLOYMENT_GUIDE.md](.hackathon/DEPLOYMENT_GUIDE.md) for detailed instructions. -->
 
 ### Local Production Build
 ```bash
@@ -279,7 +279,7 @@ This is a hackathon project, but contributions are welcome!
 3. Make your changes
 4. Submit a pull request
 
-## 📄 License
+<!-- ## 📄 License
 
 MIT License - feel free to use this code for your own projects!
 
@@ -287,10 +287,10 @@ MIT License - feel free to use this code for your own projects!
 
 - **FairScale** - For the reputation infrastructure and hackathon
 - **Superteam** - For hosting the bounty
-- **Solana** - For the ecosystem
+- **Solana** - For the ecosystem -->
 
 ---
 
-**Built with ❤️ for the FairScale Hackathon**
+**Built for lols for the FairScale Hackathon - Excuse to up my ASP.NET game**
 
-*Reputation is the new currency. Build yours on RepEngine.* ⚡
+*Reputation is the new currency. Build yours on RepEngine.*
