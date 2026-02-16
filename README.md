@@ -60,7 +60,7 @@ RepEngine is a production-ready platform that leverages **FairScale's reputation
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/Ksschkw/RepEngine
 cd RepEngine
 
 # Run the application
