@@ -1,0 +1,139 @@
+@page
+@model GovernanceModel
+@{
+    ViewData["Title"] = "Governance";
+}
+
+<section class="container" style="padding: 3rem 0;">
+    <div class="flex justify-between items-center mb-4">
+        <h1>DAO Governance</h1>
+        <button class="btn btn-primary" onclick="showCreateProposal()">Create Proposal</button>
+    </div>
+    
+    <p class="text-muted mb-4">Vote on proposals with reputation-weighted power. Higher FairScore = more influence.</p>
+    
+    <div id="proposalsList" class="grid gap-3"></div>
+</section>
+
+<script>
+async function loadProposals() {
+    try {
+        const response = await fetch('/api/governance/proposals/active');
+        const proposals = await response.json();
+        
+        const list = document.getElementById('proposalsList');
+        list.innerHTML = proposals.map(p => `
+            <div class="proposal-card">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h3 style="margin-bottom: 0.5rem;">${p.title}</h3>
+                        <span class="badge badge-primary">${p.category}</span>
+                    </div>
+                    <span class="proposal-status ${p.status.toLowerCase()}">${p.status}</span>
+                </div>
+                
+                <p class="text-muted mb-3">${p.description}</p>
+                
+                <div class="mb-3">
+                    <div class="flex justify-between text-muted mb-1" style="font-size: 0.875rem;">
+                        <span>For: ${Math.round(p.votesFor)} (${p.totalVotingPower > 0 ? Math.round((p.votesFor / p.totalVotingPower) * 100) : 0}%)</span>
+                        <span>Against: ${Math.round(p.votesAgainst)} (${p.totalVotingPower > 0 ? Math.round((p.votesAgainst / p.totalVotingPower) * 100) : 0}%)</span>
+                    </div>
+                    <div class="vote-bar">
+                        <div class="vote-bar-fill" style="width: ${p.totalVotingPower > 0 ? (p.votesFor / p.totalVotingPower) * 100 : 0}%"></div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <span class="text-muted" style="font-size: 0.875rem;">${p.totalVoters} voters • Ends ${new Date(p.votingEndsAt).toLocaleDateString()}</span>
+                    <div class="flex gap-2">
+                        <button class="btn btn-success btn-sm" onclick="vote(${p.id}, true)">👍 Vote For</button>
+                        <button class="btn btn-secondary btn-sm" onclick="vote(${p.id}, false)">👎 Vote Against</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading proposals:', error);
+    }
+}
+
+async function vote(proposalId, inFavor) {
+    const wallet = window.walletManager?.getCurrentWallet();
+    if (!wallet) {
+        alert('Please connect your wallet first');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/governance/vote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                proposalId,
+                voterWallet: wallet,
+                inFavor
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            alert(error.error || 'Failed to cast vote');
+            return;
+        }
+        
+        alert(`Vote cast successfully! You voted ${inFavor ? 'FOR' : 'AGAINST'} the proposal.`);
+        loadProposals();
+    } catch (error) {
+        alert('Error casting vote: ' + error.message);
+    }
+}
+
+function showCreateProposal() {
+    const wallet = window.walletManager?.getCurrentWallet();
+    if (!wallet) {
+        alert('Please connect your wallet first');
+        return;
+    }
+    
+    const title = prompt('Proposal Title:');
+    if (!title) return;
+    
+    const description = prompt('Proposal Description:');
+    if (!description) return;
+    
+    const category = prompt('Category (e.g., Platform Economics, Reputation System):') || 'General';
+    const days = parseInt(prompt('Voting Duration (days):') || '7');
+    
+    createProposal(wallet, title, description, category, days);
+}
+
+async function createProposal(wallet, title, description, category, days) {
+    try {
+        const response = await fetch('/api/governance/proposals', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                creatorWallet: wallet,
+                title,
+                description,
+                category,
+                votingDurationDays: days
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            alert(error.error || 'Failed to create proposal');
+            return;
+        }
+        
+        alert('Proposal created successfully!');
+        loadProposals();
+    } catch (error) {
+        alert('Error creating proposal: ' + error.message);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadProposals);
+</script>

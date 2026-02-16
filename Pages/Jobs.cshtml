@@ -1,0 +1,124 @@
+@page
+@model JobsModel
+@{
+    ViewData["Title"] = "Jobs";
+}
+
+<section class="container" style="padding: 3rem 0;">
+    <h1 class="mb-2">Reputation-Gated Jobs</h1>
+    <p class="text-muted mb-4">Access freelance opportunities based on your FairScore. Higher reputation unlocks premium gigs.</p>
+    
+    <div id="noWalletJobs" class="glass-card text-center" style="display: none;">
+        <h3>Connect Your Wallet</h3>
+        <p class="text-muted mb-4">Connect your wallet to view available jobs based on your reputation</p>
+        <button class="btn btn-primary" onclick="document.getElementById('walletConnectBtn')?.click()">Connect Wallet</button>
+    </div>
+    
+    <div id="jobsList" class="grid gap-3"></div>
+</section>
+
+<script>
+async function loadJobs() {
+    const wallet = window.walletManager?.getCurrentWallet();
+    
+    if (!wallet) {
+        document.getElementById('noWalletJobs').style.display = 'block';
+        document.getElementById('jobsList').innerHTML = '';
+        return;
+    }
+    
+    document.getElementById('noWalletJobs').style.display = 'none';
+    
+    try {
+        const response = await fetch(`/api/jobs?wallet=${encodeURIComponent(wallet)}`);
+        const jobs = await response.json();
+        
+        const list = document.getElementById('jobsList');
+        
+        if (jobs.length === 0) {
+            list.innerHTML = '<div class="glass-card text-center"><p class="text-muted">No jobs available for your reputation tier. Increase your FairScore to unlock more opportunities!</p></div>';
+            return;
+        }
+        
+        list.innerHTML = jobs.map(j => `
+            <div class="job-card ${j.isPremium ? 'premium' : ''}">
+                <h3 style="margin-bottom: 0.5rem;">${j.title}</h3>
+                
+                <div class="flex gap-2 mb-3">
+                    <span class="badge badge-primary">${getTierName(j.minimumTierRequired)}</span>
+                    ${j.isPremium ? '<span class="badge badge-warning">Premium</span>' : ''}
+                </div>
+                
+                <p class="text-muted mb-3">${j.description}</p>
+                
+                <div class="flex flex-wrap gap-2 mb-3">
+                    ${j.skills.map(s => `<span class="skill-tag">${s}</span>`).join('')}
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="job-budget">$${j.budget.toLocaleString()}</div>
+                        <div class="text-muted" style="font-size: 0.875rem;">
+                            ${j.applicationCount} applications
+                            ${j.deadline ? '• Due ' + new Date(j.deadline).toLocaleDateString() : ''}
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="applyToJob(${j.id})">Apply Now</button>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading jobs:', error);
+    }
+}
+
+function getTierName(tierLevel) {
+    const tiers = ['Unranked', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'];
+    return tiers[tierLevel] || 'Unknown';
+}
+
+async function applyToJob(jobId) {
+    const wallet = window.walletManager?.getCurrentWallet();
+    if (!wallet) {
+        alert('Please connect your wallet first');
+        return;
+    }
+    
+    const coverLetter = prompt('Cover Letter (why you\'re a good fit):');
+    if (!coverLetter) return;
+    
+    const rate = parseFloat(prompt('Your Proposed Rate ($):'));
+    if (isNaN(rate) || rate <= 0) {
+        alert('Invalid rate');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/jobs/apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jobId,
+                freelancerWallet: wallet,
+                coverLetter,
+                proposedRate: rate
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            alert(error.error || 'Failed to apply');
+            return;
+        }
+        
+        alert('Application submitted successfully! 🎉');
+        loadJobs();
+    } catch (error) {
+        alert('Error applying to job: ' + error.message);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadJobs);
+window.addEventListener('walletConnected', loadJobs);
+window.addEventListener('walletDisconnected', loadJobs);
+</script>

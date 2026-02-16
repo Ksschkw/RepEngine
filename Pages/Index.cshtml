@@ -1,0 +1,272 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home";
+}
+
+<!-- Hero Section -->
+<section class="container" style="padding: 6rem 0 4rem;">
+    <div class="text-center fade-in">
+        <h1 style="font-size: 4rem; margin-bottom: 1.5rem;">
+            Reputation is the New Currency
+        </h1>
+        <p style="font-size: 1.5rem; color: var(--text-secondary); max-width: 800px; margin: 0 auto 2rem;">
+            Unlock opportunities through on-chain reputation. Vote with weighted power. Access exclusive jobs. Build your legacy.
+        </p>
+        <div class="flex justify-center gap-3 mt-4">
+            <button class="btn btn-primary btn-lg" onclick="scrollToDemo()">
+                Try Live Demo
+            </button>
+            <a href="/Dashboard" class="btn btn-secondary btn-lg">
+                View Dashboard
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Live Demo Section -->
+<section id="demo" class="container" style="padding: 4rem 0;">
+    <div class="glass-card text-center">
+        <h2 class="mb-4">Check Your FairScore</h2>
+        <div style="max-width: 500px; margin: 0 auto;">
+            <input type="text" id="walletInput" placeholder="Enter Solana wallet address (or leave empty for demo)" 
+                   style="margin-bottom: 1rem;" />
+            <button class="btn btn-primary" onclick="checkScore()" style="width: 100%;">
+                <span id="checkScoreText">Check Score</span>
+            </button>
+        </div>
+        
+        <div id="scoreResult" style="display: none; margin-top: 3rem;">
+            <div class="flex justify-center items-center gap-4 flex-col">
+                <div class="score-gauge" id="scoreGauge">
+                    <div class="score-gauge-inner">
+                        <div class="score-value" id="scoreValue">--</div>
+                        <div style="font-size: 0.875rem; color: var(--text-muted);">FairScore</div>
+                    </div>
+                </div>
+                
+                <div id="tierBadge" class="tier-badge"></div>
+                
+                <div style="width: 100%; max-width: 600px; text-align: left; margin-top: 2rem;">
+                    <h4>Score Breakdown</h4>
+                    <div class="grid gap-2 mt-3">
+                        <div class="flex justify-between items-center">
+                            <span>💰 Transaction Volume</span>
+                            <div class="flex items-center gap-2">
+                                <div class="progress-bar" style="width: 150px;">
+                                    <div class="progress-bar-fill" id="txVolume"></div>
+                                </div>
+                                <span id="txVolumeText" class="text-muted">--</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>⏰ Account Age</span>
+                            <div class="flex items-center gap-2">
+                                <div class="progress-bar" style="width: 150px;">
+                                    <div class="progress-bar-fill" id="accountAge"></div>
+                                </div>
+                                <span id="accountAgeText" class="text-muted">--</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>🏦 DeFi Activity</span>
+                            <div class="flex items-center gap-2">
+                                <div class="progress-bar" style="width: 150px;">
+                                    <div class="progress-bar-fill" id="defiActivity"></div>
+                                </div>
+                                <span id="defiActivityText" class="text-muted">--</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>🗳️ Governance</span>
+                            <div class="flex items-center gap-2">
+                                <div class="progress-bar" style="width: 150px;">
+                                    <div class="progress-bar-fill" id="governance"></div>
+                                </div>
+                                <span id="governanceText" class="text-muted">--</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>🌐 Social Reputation</span>
+                            <div class="flex items-center gap-2">
+                                <div class="progress-bar" style="width: 150px;">
+                                    <div class="progress-bar-fill" id="social"></div>
+                                </div>
+                                <span id="socialText" class="text-muted">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Reputation Tiers -->
+<section class="container" style="padding: 4rem 0;">
+    <h2 class="text-center mb-4">Reputation Tiers</h2>
+    <p class="text-center text-muted mb-4">Higher reputation unlocks more power and opportunities</p>
+    
+    <div class="grid grid-cols-3 gap-3">
+        <div class="glass-card text-center">
+            <div class="tier-badge tier-bronze" style="font-size: 1rem;">🥉 Bronze</div>
+            <p class="mt-3 text-muted">Score: 20-39</p>
+            <ul style="text-align: left; color: var(--text-secondary); font-size: 0.875rem;">
+                <li>1x voting power</li>
+                <li>Entry-level jobs</li>
+                <li>5% fee discount</li>
+            </ul>
+        </div>
+        <div class="glass-card text-center">
+            <div class="tier-badge tier-silver" style="font-size: 1rem;">🥈 Silver</div>
+            <p class="mt-3 text-muted">Score: 40-59</p>
+            <ul style="text-align: left; color: var(--text-secondary); font-size: 0.875rem;">
+                <li>1.5x voting power</li>
+                <li>Create proposals</li>
+                <li>10% fee discount</li>
+            </ul>
+        </div>
+        <div class="glass-card text-center">
+            <div class="tier-badge tier-gold" style="font-size: 1rem;">🥇 Gold</div>
+            <p class="mt-3 text-muted">Score: 60-79</p>
+            <ul style="text-align: left; color: var(--text-secondary); font-size: 0.875rem;">
+                <li>2x voting power</li>
+                <li>Premium jobs</li>
+                <li>15% fee discount</li>
+            </ul>
+        </div>
+        <div class="glass-card text-center">
+            <div class="tier-badge tier-platinum" style="font-size: 1rem;">💎 Platinum</div>
+            <p class="mt-3 text-muted">Score: 80-94</p>
+            <ul style="text-align: left; color: var(--text-secondary); font-size: 0.875rem;">
+                <li>3x voting power</li>
+                <li>Exclusive access</li>
+                <li>20% fee discount</li>
+            </ul>
+        </div>
+        <div class="glass-card text-center">
+            <div class="tier-badge tier-diamond" style="font-size: 1rem;">💠 Diamond</div>
+            <p class="mt-3 text-muted">Score: 95-100</p>
+            <ul style="text-align: left; color: var(--text-secondary); font-size: 0.875rem;">
+                <li>5x voting power</li>
+                <li>VIP job access</li>
+                <li>25% fee + revenue share</li>
+            </ul>
+        </div>
+        <div class="glass-card text-center">
+            <div class="tier-badge tier-unranked" style="font-size: 1rem;">⚪ Unranked</div>
+            <p class="mt-3 text-muted">Score: 0-19</p>
+            <ul style="text-align: left; color: var(--text-secondary); font-size: 0.875rem;">
+                <li>0.5x voting power</li>
+                <li>View only</li>
+                <li>No discounts</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="container" style="padding: 4rem 0;">
+    <h2 class="text-center mb-4">Why RepEngine?</h2>
+    <div class="grid grid-cols-2 gap-4">
+        <div class="glass-card">
+            <h3>🗳️ Weighted DAO Governance</h3>
+            <p class="text-muted">Your reputation determines your voting power. Higher FairScore = more influence on platform decisions.</p>
+        </div>
+        <div class="glass-card">
+            <h3>💼 Reputation-Gated Jobs</h3>
+            <p class="text-muted">Access premium freelance opportunities based on your on-chain reputation. Prove your worth, unlock better gigs.</p>
+        </div>
+        <div class="glass-card">
+            <h3>💎 Tier-Based Benefits</h3>
+            <p class="text-muted">Climb the reputation ladder to unlock lower fees, exclusive features, and revenue sharing opportunities.</p>
+        </div>
+        <div class="glass-card">
+            <h3>🔒 Privacy-First Scoring</h3>
+            <p class="text-muted">Powered by FairScale's privacy-preserving reputation infrastructure. Your data, your control.</p>
+        </div>
+    </div>
+</section>
+
+<script>
+function scrollToDemo() {
+    document.getElementById('demo').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function checkScore() {
+    const walletInput = document.getElementById('walletInput');
+    const checkScoreText = document.getElementById('checkScoreText');
+    const scoreResult = document.getElementById('scoreResult');
+    
+    let wallet = walletInput.value.trim();
+    if (!wallet) {
+        wallet = window.walletManager?.getCurrentWallet() || generateDemoWallet();
+        walletInput.value = wallet;
+    }
+    
+    checkScoreText.textContent = 'Loading...';
+    
+    try {
+        const response = await fetch(`/api/fairscore?wallet=${encodeURIComponent(wallet)}`);
+        const data = await response.json();
+        
+        displayScore(data);
+        scoreResult.style.display = 'block';
+        scoreResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch (error) {
+        alert('Error fetching score: ' + error.message);
+    } finally {
+        checkScoreText.textContent = 'Check Score';
+    }
+}
+
+function displayScore(data) {
+    // Update score value and gauge
+    const scoreValue = document.getElementById('scoreValue');
+    const scoreGauge = document.getElementById('scoreGauge');
+    scoreValue.textContent = data.score;
+    scoreGauge.style.setProperty('--score-angle', `${(data.score / 100) * 360}deg`);
+    
+    // Update tier badge
+    const tierBadge = document.getElementById('tierBadge');
+    const tierClass = `tier-${data.tier.toLowerCase()}`;
+    tierBadge.className = `tier-badge ${tierClass}`;
+    tierBadge.innerHTML = `${getTierIcon(data.tier)} ${data.tier}`;
+    
+    // Update breakdown
+    updateBreakdown('txVolume', data.breakdown.transactionVolume, 25);
+    updateBreakdown('accountAge', data.breakdown.accountAge, 20);
+    updateBreakdown('defiActivity', data.breakdown.deFiActivity, 20);
+    updateBreakdown('governance', data.breakdown.governanceParticipation, 20);
+    updateBreakdown('social', data.breakdown.socialReputation, 15);
+}
+
+function updateBreakdown(id, value, max) {
+    const bar = document.getElementById(id);
+    const text = document.getElementById(id + 'Text');
+    const percentage = (value / max) * 100;
+    bar.style.width = `${percentage}%`;
+    text.textContent = `${value}/${max}`;
+}
+
+function getTierIcon(tier) {
+    const icons = {
+        'Unranked': '⚪',
+        'Bronze': '🥉',
+        'Silver': '🥈',
+        'Gold': '🥇',
+        'Platinum': '💎',
+        'Diamond': '💠'
+    };
+    return icons[tier] || '⚪';
+}
+
+function generateDemoWallet() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz123456789';
+    let wallet = '';
+    for (let i = 0; i < 44; i++) {
+        wallet += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return wallet;
+}
+</script>

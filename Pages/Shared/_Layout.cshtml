@@ -1,0 +1,128 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>@ViewData["Title"] - RepEngine</title>
+    <meta name="description" content="RepEngine - Where reputation unlocks opportunities. DAO governance with weighted voting and reputation-gated freelance marketplace powered by FairScale.">
+    
+    <!-- Favicon - Use PWA Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="~/icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="~/icons/icon-512x512.png">
+    <link rel="apple-touch-icon" href="~/icons/icon-192x192.png">
+    <link rel="shortcut icon" href="~/icons/icon-192x192.png">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="~/manifest.json" />
+    
+    <!-- Theme Colors -->
+    <meta name="theme-color" content="#8b5cf6" />
+    <meta name="msapplication-TileColor" content="#8b5cf6" />
+    <meta name="msapplication-navbutton-color" content="#8b5cf6" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="~/icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="~/icons/apple-touch-icon.png" />
+    
+    <!-- Apple Web App -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="RepEngine" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="192x192" href="~/icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="~/icons/icon-512x512.png" />
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/components.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/mobile.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/desktop-nav.css" asp-append-version="true" />
+</head>
+<body>
+    <!-- Desktop Navigation (hidden on mobile) -->
+    <nav class="navbar">
+        <div class="container">
+            <a class="navbar-brand" asp-area="" asp-page="/Index">⚡ RepEngine</a>
+            <div style="display: flex; gap: 2rem; align-items: center;">
+                <a class="nav-link" asp-area="" asp-page="/Index">Home</a>
+                <a class="nav-link" asp-area="" asp-page="/Dashboard">Dashboard</a>
+                <a class="nav-link" asp-area="" asp-page="/Governance">Governance</a>
+                <a class="nav-link" asp-area="" asp-page="/Jobs">Jobs</a>
+                <button id="walletConnectBtnDesktop" class="wallet-btn">
+                    <span id="walletBtnTextDesktop">Connect Wallet</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Top App Bar (Mobile Only - Hidden on Desktop) -->
+    <header class="mobile-app-bar hide-desktop">
+        <div class="container">
+            <div class="app-bar-content">
+                <span class="app-logo">⚡ RepEngine</span>
+                <button id="walletConnectBtn" class="connect-btn">
+                    <span id="walletBtnText">Connect</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="page-content">
+        @RenderBody()
+    </div>
+
+    <!-- Bottom Navigation (Mobile Only - Hidden on Desktop) -->
+    <nav class="bottom-nav hide-desktop">
+        <a class="nav-item" asp-area="" asp-page="/Index">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            <span class="nav-label">Home</span>
+        </a>
+        <a class="nav-item" asp-area="" asp-page="/Dashboard">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span class="nav-label">Dashboard</span>
+        </a>
+        <a class="nav-item" asp-area="" asp-page="/Governance">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 6v6l4 2"></path>
+            </svg>
+            <span class="nav-label">Governance</span>
+        </a>
+        <a class="nav-item" asp-area="" asp-page="/Jobs">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
+            <span class="nav-label">Jobs</span>
+        </a>
+    </nav>
+
+    <footer class="footer">
+        <div class="container text-center">
+            <p class="text-muted">
+                &copy; 2026 RepEngine - Powered by <a href="https://fairscale.xyz" target="_blank">FairScale</a> | 
+                <a asp-area="" asp-page="/Privacy">Privacy</a>
+            </p>
+            <p class="text-muted" style="font-size: 0.875rem;">
+                Built for FairScale Hackathon - Reputation is the new currency 💎
+            </p>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/js/pwa.js" asp-append-version="true"></script>
+    <script src="~/js/wallet.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,137 @@
+@page
+@model DashboardModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<section class="container" style="padding: 3rem 0;">
+    <h1 class="text-center mb-4">Your Reputation Dashboard</h1>
+    
+    <div id="dashboardContent" style="display: none;">
+        <div class="grid grid-cols-2 gap-4 mb-4">
+            <!-- Score Card -->
+            <div class="glass-card text-center">
+                <h3>Your FairScore</h3>
+                <div class="score-gauge" id="dashScoreGauge" style="margin: 2rem auto;">
+                    <div class="score-gauge-inner">
+                        <div class="score-value" id="dashScore">--</div>
+                        <div style="font-size: 0.875rem; color: var(--text-muted);">FairScore</div>
+                    </div>
+                </div>
+                <div id="dashTierBadge" class="tier-badge" style="margin: 1rem auto;"></div>
+            </div>
+            
+            <!-- Stats Card -->
+            <div class="glass-card">
+                <h3>Your Stats</h3>
+                <div class="grid gap-3 mt-3">
+                    <div class="flex justify-between">
+                        <span>🗳️ Voting Power:</span>
+                        <strong id="votingPower">--</strong>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>📊 Next Tier:</span>
+                        <strong id="nextTier">--</strong>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>📈 Points Needed:</span>
+                        <strong id="pointsNeeded">--</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Improvement Suggestions -->
+        <div class="glass-card mb-4">
+            <h3>💡 Improvement Suggestions</h3>
+            <ul id="suggestions" class="mt-3" style="color: var(--text-secondary);"></ul>
+        </div>
+        
+        <!-- Score History Chart -->
+        <div class="glass-card">
+            <h3>📈 Score History (Last 6 Months)</h3>
+            <div id="historyChart" class="mt-3" style="height: 200px; display: flex; align-items: flex-end; gap: 1rem; justify-content: space-between;"></div>
+        </div>
+    </div>
+    
+    <div id="noWallet" class="glass-card text-center">
+        <h3>Connect Your Wallet</h3>
+        <p class="text-muted mb-4">Connect your wallet to view your reputation dashboard</p>
+        <button class="btn btn-primary" onclick="connectWalletPrompt()">Connect Wallet</button>
+    </div>
+</section>
+
+<script>
+async function loadDashboard() {
+    const wallet = window.walletManager?.getCurrentWallet();
+    
+    if (!wallet) {
+        document.getElementById('dashboardContent').style.display = 'none';
+        document.getElementById('noWallet').style.display = 'block';
+        return;
+    }
+    
+    document.getElementById('noWallet').style.display = 'none';
+    
+    try {
+        const response = await fetch(`/api/dashboard?wallet=${encodeURIComponent(wallet)}`);
+        const data = await response.json();
+        
+        // Update score gauge
+        document.getElementById('dashScore').textContent = data.score;
+        const gauge = document.getElementById('dashScoreGauge');
+        gauge.style.setProperty('--score-angle', `${(data.score / 100) * 360}deg`);
+        
+        // Update tier badge
+        const tierBadge = document.getElementById('dashTierBadge');
+        const tierClass = `tier-${data.tier.name.toLowerCase()}`;
+        tierBadge.className = `tier-badge ${tierClass}`;
+        tierBadge.innerHTML = `${data.tier.icon} ${data.tier.name}`;
+        
+        // Update stats
+        document.getElementById('votingPower').textContent = Math.round(data.votingPower);
+        document.getElementById('nextTier').textContent = data.nextTier ? data.nextTier.name : 'Max Tier!';
+        document.getElementById('pointsNeeded').textContent = data.scoreToNextTier || 'N/A';
+        
+        // Update suggestions
+        const suggestionsList = document.getElementById('suggestions');
+        suggestionsList.innerHTML = data.suggestions.map(s => `<li>${s}</li>`).join('');
+        
+        // Render history chart
+        renderHistoryChart(data.history);
+        
+        document.getElementById('dashboardContent').style.display = 'block';
+    } catch (error) {
+        alert('Error loading dashboard: ' + error.message);
+    }
+}
+
+function renderHistoryChart(history) {
+    const chart = document.getElementById('historyChart');
+    const maxScore = 100;
+    
+    chart.innerHTML = history.map(h => {
+        const height = (h.score / maxScore) * 100;
+        const date = new Date(h.date).toLocaleDateString('en-US', { month: 'short' });
+        return `
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+                <div style="width: 100%; background: var(--gradient-primary); height: ${height}%; border-radius: var(--radius-sm); min-height: 20px; position: relative;">
+                    <span style="position: absolute; top: -1.5rem; left: 50%; transform: translateX(-50%); font-size: 0.75rem; color: var(--text-muted);">${h.score}</span>
+                </div>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">${date}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function connectWalletPrompt() {
+    document.getElementById('walletConnectBtn')?.click();
+}
+
+// Load dashboard on page load
+document.addEventListener('DOMContentLoaded', loadDashboard);
+
+// Reload when wallet connects
+window.addEventListener('walletConnected', loadDashboard);
+window.addEventListener('walletDisconnected', loadDashboard);
+</script>

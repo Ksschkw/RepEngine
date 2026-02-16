@@ -1,0 +1,601 @@
+/* Mobile-Specific Styles for RepEngine */
+
+/* ========================================
+   MOBILE NAVIGATION
+   ======================================== */
+
+.hamburger-btn {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    z-index: 1001;
+}
+
+.hamburger-btn span {
+    width: 24px;
+    height: 3px;
+    background: var(--text-primary);
+    border-radius: 2px;
+    transition: all var(--transition-base);
+}
+
+.hamburger-btn.active span:nth-child(1) {
+    transform: rotate(45deg) translate(6px, 6px);
+}
+
+.hamburger-btn.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-btn.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(6px, -6px);
+}
+
+/* Mobile Navigation Styles */
+@media (max-width: 768px) {
+    .hamburger-btn {
+        display: flex;
+    }
+
+    .nav-links {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 280px;
+        height: 100vh;
+        background: var(--bg-secondary);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-left: 1px solid var(--border-color);
+        padding: 5rem 2rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        transition: right var(--transition-slow);
+        z-index: 1000;
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .nav-links.active {
+        right: 0;
+    }
+
+    .nav-link {
+        font-size: 1.125rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .wallet-btn {
+        width: 100%;
+        justify-content: center;
+        margin-top: 1rem;
+    }
+
+    /* Overlay when menu is open */
+    .nav-links.active::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 280px;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: -1;
+    }
+}
+
+/* ========================================
+   NATIVE MOBILE CARDS
+   ======================================== */
+
+@media (max-width: 768px) {
+    .glass-card {
+        background: rgba(31, 41, 55, 0.6);
+        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Card press effect */
+    .glass-card:active {
+        transform: scale(0.98);
+        transition: transform 0.1s ease;
+    }
+}
+
+/* ========================================
+   NATIVE MOBILE BUTTONS
+   ======================================== */
+
+@media (max-width: 768px) {
+    .btn {
+        min-height: 44px;
+        border-radius: 10px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+        font-size: 0.9375rem;
+        padding: 10px 20px;
+    }
+
+    .btn:active {
+        transform: scale(0.96);
+    }
+
+    .btn-lg {
+        min-height: 48px;
+        font-size: 1rem;
+    }
+
+    /* Full width buttons on mobile */
+    .btn-primary,
+    .btn-lg {
+        width: 100%;
+    }
+}
+
+/* ========================================
+   NATIVE MOBILE INPUTS
+   ======================================== */
+
+@media (max-width: 768px) {
+
+    input,
+    textarea,
+    select {
+        min-height: 44px;
+        border-radius: 10px;
+        font-size: 16px;
+        /* Prevents zoom on iOS */
+        padding: 10px 14px;
+        background: rgba(31, 41, 55, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+        border-color: var(--accent-primary);
+        background: rgba(31, 41, 55, 0.95);
+        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    }
+}
+
+/* ========================================
+   TOUCH-FRIENDLY BUTTONS
+   ======================================== */
+
+@media (max-width: 768px) {
+
+    /* Minimum touch target size */
+    .btn,
+    button,
+    a.nav-link {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Larger tap targets for primary actions */
+    .btn-primary,
+    .btn-lg {
+        min-height: 48px;
+        padding: 0.875rem 1.5rem;
+    }
+
+    /* Wallet button */
+    .wallet-btn {
+        min-height: 44px;
+        font-size: 0.875rem;
+    }
+}
+
+/* ========================================
+   NATIVE MOBILE TYPOGRAPHY
+   ======================================== */
+
+@media (max-width: 768px) {
+    h1 {
+        font-size: 1.75rem !important;
+        font-weight: 800;
+        line-height: 1.2;
+        margin-bottom: 8px;
+    }
+
+    h2 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+    }
+
+    p {
+        font-size: 0.9375rem;
+        line-height: 1.5;
+    }
+
+    /* Larger text for better readability */
+    .text-muted {
+        font-size: 0.8125rem;
+    }
+
+    /* Hero section specific */
+    .hero h1 {
+        font-size: 1.875rem !important;
+    }
+
+    .hero p {
+        font-size: 0.9375rem;
+    }
+}
+
+/* ========================================
+   NATIVE MOBILE SECTIONS
+   ======================================== */
+
+@media (max-width: 768px) {
+    section {
+        padding: 16px 0 !important;
+    }
+
+    /* First section has more top padding */
+    section:first-of-type {
+        padding-top: 20px !important;
+    }
+
+    /* Hero section */
+    .hero {
+        padding: 24px 0 !important;
+        min-height: auto !important;
+    }
+}
+
+/* ========================================
+   MOBILE LAYOUTS
+   ======================================== */
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 1rem;
+    }
+
+    /* Stack flex items vertically */
+    .flex.gap-3 {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    /* Full width buttons on mobile */
+    .btn-lg {
+        width: 100%;
+    }
+
+    /* Glass cards - reduce padding */
+    .glass-card {
+        padding: 1.5rem;
+    }
+
+    /* Grid layouts - single column */
+    .grid-cols-2,
+    .grid-cols-3 {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ========================================
+   MOBILE FORMS
+   ======================================== */
+
+@media (max-width: 768px) {
+
+    input,
+    textarea,
+    select {
+        font-size: 16px;
+        /* Prevents zoom on iOS */
+        padding: 0.875rem 1rem;
+    }
+
+    /* Larger touch targets for form controls */
+    input[type="checkbox"],
+    input[type="radio"] {
+        min-width: 24px;
+        min-height: 24px;
+    }
+}
+
+/* ========================================
+   MOBILE SPACING
+   ======================================== */
+
+@media (max-width: 768px) {
+
+    /* Reduce section padding */
+    section {
+        padding: 3rem 0 !important;
+    }
+
+    /* Tighter spacing */
+    .mt-4 {
+        margin-top: 1.5rem;
+    }
+
+    .mb-4 {
+        margin-bottom: 1.5rem;
+    }
+
+    .gap-4 {
+        gap: 1.5rem;
+    }
+}
+
+/* ========================================
+   SAFE AREA INSETS (iPhone X+)
+   ======================================== */
+
+@supports (padding: max(0px)) {
+    body {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+
+    .navbar {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+
+    .footer {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+/* ========================================
+   MOBILE ANIMATIONS (REDUCED MOTION)
+   ======================================== */
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ========================================
+   MOBILE NAVBAR
+   ======================================== */
+
+@media (max-width: 768px) {
+    .navbar {
+        padding: 1rem 0;
+    }
+
+    .navbar-brand {
+        font-size: 1.25rem;
+    }
+}
+
+/* ========================================
+   MOBILE FOOTER
+   ======================================== */
+
+@media (max-width: 768px) {
+    .footer {
+        padding: 2rem 0;
+        font-size: 0.875rem;
+    }
+
+    .footer p {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* ========================================
+   MOBILE SCORE GAUGE
+   ======================================== */
+
+@media (max-width: 768px) {
+    .score-gauge {
+        width: 180px !important;
+        height: 180px !important;
+    }
+
+    .score-value {
+        font-size: 3rem !important;
+    }
+}
+
+/* ========================================
+   MOBILE TIER BADGES
+   ======================================== */
+
+@media (max-width: 768px) {
+    .tier-badge {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+}
+
+/* ========================================
+   MOBILE PROGRESS BARS
+   ======================================== */
+
+@media (max-width: 768px) {
+    .progress-bar {
+        width: 100px !important;
+    }
+}
+
+/* ========================================
+   MOBILE MODALS & OVERLAYS
+   ======================================== */
+
+@media (max-width: 768px) {
+
+    .modal,
+    .overlay {
+        width: 95%;
+        max-width: 95%;
+        margin: 1rem auto;
+    }
+}
+
+/* ========================================
+   LANDSCAPE ORIENTATION
+   ======================================== */
+
+@media (max-width: 768px) and (orientation: landscape) {
+    h1 {
+        font-size: 2rem !important;
+    }
+
+    section {
+        padding: 2rem 0 !important;
+    }
+}
+
+/* ========================================
+   SMALL PHONES (< 375px)
+   ======================================== */
+
+@media (max-width: 374px) {
+    html {
+        font-size: 13px;
+    }
+
+    h1 {
+        font-size: 2rem !important;
+    }
+
+    .glass-card {
+        padding: 1rem;
+    }
+
+    .btn {
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* ========================================
+   TABLET (768px - 1024px)
+   ======================================== */
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .container {
+        max-width: 720px;
+    }
+
+    .grid-cols-3 {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+/* ========================================
+   PULL TO REFRESH INDICATOR
+   ======================================== */
+
+.pull-to-refresh {
+    position: fixed;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 40px;
+    transition: top var(--transition-base);
+    z-index: 9999;
+}
+
+.pull-to-refresh.active {
+    top: 20px;
+}
+
+.pull-to-refresh .spinner {
+    width: 40px;
+    height: 40px;
+}
+
+/* ========================================
+   MOBILE-SPECIFIC UTILITIES
+   ======================================== */
+
+@media (max-width: 768px) {
+    .hide-mobile {
+        display: none !important;
+    }
+
+    .show-mobile {
+        display: block !important;
+    }
+
+    .text-center-mobile {
+        text-align: center !important;
+    }
+
+    .full-width-mobile {
+        width: 100% !important;
+    }
+}
+
+@media (min-width: 769px) {
+    .hide-desktop {
+        display: none !important;
+    }
+
+    .show-desktop {
+        display: block !important;
+    }
+}
+
+/* ========================================
+   DESKTOP/MOBILE VISIBILITY CONTROLS
+   ======================================== */
+
+/* Hide mobile-only elements on desktop (> 768px) */
+.hide-desktop {
+    display: none !important;
+}
+
+/* Show mobile-only elements on mobile (<= 768px) */
+@media (max-width: 768px) {
+    .hide-desktop {
+        display: block !important;
+    }
+
+    /* For flex/grid items, use appropriate display */
+    .hide-desktop.bottom-nav {
+        display: flex !important;
+    }
+
+    /* Hide desktop-only elements on mobile */
+    .hide-mobile {
+        display: none !important;
+    }
+
+    /* Hide desktop navbar on mobile */
+    .navbar {
+        display: none !important;
+    }
+}
+
+/* Ensure mobile app bar and bottom nav are NEVER visible on desktop */
+@media (min-width: 769px) {
+
+    .mobile-app-bar,
+    .bottom-nav {
+        display: none !important;
+    }
+}
