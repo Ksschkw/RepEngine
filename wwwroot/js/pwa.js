@@ -65,10 +65,14 @@ class PWAManager {
             installBtn.innerHTML = '📱 Install App';
             installBtn.onclick = () => this.promptInstall();
 
-            // Add to navbar or create floating button
-            const navbar = document.querySelector('.navbar .container');
-            if (navbar) {
-                navbar.appendChild(installBtn);
+            // Add to desktop nav if visible, otherwise fixed body for mobile
+            const desktopNav = document.querySelector('.desktop-nav .dnav-links');
+            if (desktopNav && window.innerWidth >= 769) {
+                const walletBtn = desktopNav.querySelector('.dnav-wallet');
+                if (walletBtn) desktopNav.insertBefore(installBtn, walletBtn);
+                else desktopNav.appendChild(installBtn);
+            } else {
+                document.body.appendChild(installBtn);
             }
         }
         installBtn.style.display = 'inline-flex';
@@ -99,7 +103,7 @@ class PWAManager {
         const notification = document.createElement('div');
         notification.className = 'pwa-update-notification';
         notification.innerHTML = `
-      <div class="glass-card" style="position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 300px; padding: 1rem;">
+      <div class="glass-card" style="position: fixed; top: 70px; right: 20px; z-index: 9999; max-width: 300px; padding: 1rem;">
         <p style="margin: 0 0 0.5rem 0;"><strong>Update Available</strong></p>
         <p style="margin: 0 0 1rem 0; font-size: 0.875rem; color: var(--text-muted);">
           A new version of RepEngine is available.
@@ -226,7 +230,7 @@ style.textContent = `
   @media (max-width: 768px) {
     .pwa-install-btn {
       position: fixed;
-      bottom: 20px;
+      bottom: 85px;
       right: 20px;
       z-index: 1000;
       box-shadow: var(--shadow-xl);
