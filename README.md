@@ -5,7 +5,7 @@
 RepEngine is a Progressive Web App (PWA) built on **.NET 10** that integrates the **FairScale API** to weight DAO governance and job market access based on on-chain reputation.
 
 ---
-
+![mobile image](image.png)
 ## 🏗️ Technical Architecture
 
 ### Backend: .NET 10 + Minimal APIs

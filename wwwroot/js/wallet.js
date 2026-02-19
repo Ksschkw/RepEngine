@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function promptWalletConnection() {
     // For demo: simple prompt. In production → Phantom/Solflare wallet adapters.
-    const wallet = prompt('Enter your Solana wallet address (or leave empty for demo):');
+    const wallet = await uiManager.prompt('Enter your Solana wallet address (or leave empty for demo):', '', 'Connect Wallet');
     if (wallet === null) return; // User cancelled
     const walletAddress = wallet.trim() || generateDemoWallet();
     connectWallet(walletAddress);
