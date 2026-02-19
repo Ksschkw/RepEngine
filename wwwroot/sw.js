@@ -1,163 +1,103 @@
-// Service Worker for RepEngine PWA
-const CACHE_VERSION = 'v1.0.0';
-const CACHE_NAME = `repengine-${CACHE_VERSION}`;
+// RepEngine Service Worker — PWA offline support
+const CACHE_NAME = 'repengine-v2';
+const API_CACHE = 'repengine-api-v2';
 
-// Assets to cache immediately on install
 const STATIC_ASSETS = [
     '/',
     '/Index',
     '/Dashboard',
     '/Governance',
     '/Jobs',
+    '/Offline',
     '/css/site.css',
-    '/css/components.css',
     '/js/site.js',
     '/js/wallet.js',
-    '/lib/jquery/dist/jquery.min.js',
+    '/js/pwa.js',
+    '/manifest.json',
     '/icons/icon-192x192.png',
     '/icons/icon-512x512.png',
     '/favicon.ico'
 ];
 
-// Install event - cache static assets
-self.addEventListener('install', (event) => {
-    console.log('[SW] Installing service worker...');
+// ── Install: pre-cache static assets ──────────────────────
+self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('[SW] Caching static assets');
-                return cache.addAll(STATIC_ASSETS);
-            })
+            .then(cache => cache.addAll(STATIC_ASSETS))
             .then(() => self.skipWaiting())
     );
 });
 
-// Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
-    console.log('[SW] Activating service worker...');
+// ── Activate: clean old caches ────────────────────────────
+self.addEventListener('activate', event => {
     event.waitUntil(
-        caches.keys()
-            .then((cacheNames) => {
-                return Promise.all(
-                    cacheNames
-                        .filter((name) => name !== CACHE_NAME)
-                        .map((name) => {
-                            console.log('[SW] Deleting old cache:', name);
-                            return caches.delete(name);
-                        })
-                );
-            })
-            .then(() => self.clients.claim())
+        caches.keys().then(keys =>
+            Promise.all(
+                keys
+                    .filter(k => k !== CACHE_NAME && k !== API_CACHE)
+                    .map(k => caches.delete(k))
+            )
+        ).then(() => self.clients.claim())
     );
 });
 
-// Fetch event - serve from cache, fallback to network
-self.addEventListener('fetch', (event) => {
+// ── Fetch strategy ────────────────────────────────────────
+self.addEventListener('fetch', event => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Skip cross-origin requests
-    if (url.origin !== location.origin) {
-        return;
-    }
+    // Skip non-GET (POST votes, applications, etc.)
+    if (request.method !== 'GET') return;
 
-    // API requests - network first, cache fallback
+    // API calls → network-first with cache fallback
     if (url.pathname.startsWith('/api/')) {
-        event.respondWith(
-            fetch(request)
-                .then((response) => {
-                    // Clone and cache successful API responses
-                    if (response.ok) {
-                        const responseClone = response.clone();
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(request, responseClone);
-                        });
-                    }
-                    return response;
-                })
-                .catch(() => {
-                    // Fallback to cache if network fails
-                    return caches.match(request).then((cachedResponse) => {
-                        if (cachedResponse) {
-                            return cachedResponse;
-                        }
-                        // Return offline response for API calls
-                        return new Response(
-                            JSON.stringify({ error: 'Offline', message: 'No network connection' }),
-                            {
-                                status: 503,
-                                headers: { 'Content-Type': 'application/json' }
-                            }
-                        );
-                    });
-                })
-        );
+        event.respondWith(networkFirstWithCache(request));
         return;
     }
 
-    // Static assets - cache first, network fallback
-    event.respondWith(
-        caches.match(request)
-            .then((cachedResponse) => {
-                if (cachedResponse) {
-                    return cachedResponse;
-                }
-
-                return fetch(request)
-                    .then((response) => {
-                        // Cache successful responses
-                        if (response.ok && request.method === 'GET') {
-                            const responseClone = response.clone();
-                            caches.open(CACHE_NAME).then((cache) => {
-                                cache.put(request, responseClone);
-                            });
-                        }
-                        return response;
-                    })
-                    .catch(() => {
-                        // Return offline page for navigation requests
-                        if (request.mode === 'navigate') {
-                            return caches.match('/Offline');
-                        }
-                        return new Response('Offline', { status: 503 });
-                    });
-            })
-    );
+    // Static assets → cache-first
+    event.respondWith(cacheFirstWithNetwork(request));
 });
 
-// Background sync for failed requests (optional)
-self.addEventListener('sync', (event) => {
-    if (event.tag === 'sync-data') {
-        console.log('[SW] Background sync triggered');
-        event.waitUntil(syncData());
+async function cacheFirstWithNetwork(request) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    try {
+        const response = await fetch(request);
+        if (response.ok) {
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch {
+        // Offline fallback for pages
+        if (request.mode === 'navigate') {
+            return caches.match('/Offline') || new Response('Offline', { status: 503 });
+        }
+        return new Response('Offline', { status: 503 });
     }
-});
-
-async function syncData() {
-    // Implement background sync logic here
-    console.log('[SW] Syncing data...');
 }
 
-// Push notifications (optional for future)
-self.addEventListener('push', (event) => {
-    const options = {
-        body: event.data ? event.data.text() : 'New update available',
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-192x192.png',
-        vibrate: [200, 100, 200],
-        tag: 'repengine-notification',
-        requireInteraction: false
-    };
+async function networkFirstWithCache(request) {
+    try {
+        const response = await fetch(request);
+        if (response.ok) {
+            const cache = await caches.open(API_CACHE);
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch {
+        const cached = await caches.match(request);
+        return cached || new Response(JSON.stringify({ error: 'Offline' }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' }
+        });
+    }
+}
 
-    event.waitUntil(
-        self.registration.showNotification('RepEngine', options)
-    );
-});
-
-// Notification click handler
-self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-    event.waitUntil(
-        clients.openWindow('/')
-    );
+// ── Handle update messages ────────────────────────────────
+self.addEventListener('message', event => {
+    if (event.data?.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
 });

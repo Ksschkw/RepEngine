@@ -16,6 +16,10 @@ public class ReputationService
     public async Task<ReputationTier> GetUserTierAsync(string walletAddress)
     {
         var scoreData = await _fairScoreService.GetScoreAsync(walletAddress);
+        // Prefer the API's tier string if available; fall back to score-based lookup
+        if (!string.IsNullOrWhiteSpace(scoreData.Tier))
+            return ReputationTier.GetTierByName(scoreData.Tier);
+
         return ReputationTier.GetTierByScore(scoreData.Score);
     }
 
@@ -29,16 +33,13 @@ public class ReputationService
     {
         var tier = await GetUserTierAsync(walletAddress);
         var scoreData = await _fairScoreService.GetScoreAsync(walletAddress);
-        
-        // Base voting power is the score, multiplied by tier multiplier
         return scoreData.Score * tier.VotingPowerMultiplier;
     }
 
     public async Task<decimal> CalculateJobFeeAsync(decimal baseAmount, string walletAddress)
     {
         var tier = await GetUserTierAsync(walletAddress);
-        var discount = baseAmount * tier.JobFeeDiscount;
-        return baseAmount - discount;
+        return baseAmount - (baseAmount * tier.JobFeeDiscount);
     }
 
     public async Task<bool> CanCreateProposalAsync(string walletAddress, int proposalsThisMonth)
@@ -50,40 +51,39 @@ public class ReputationService
     public async Task<bool> CanAccessJobAsync(string walletAddress, Job job)
     {
         var tier = await GetUserTierAsync(walletAddress);
-        
-        // Check minimum tier requirement
-        // Parse the string tier requirement to TierLevel enum
-        if (!Enum.TryParse<TierLevel>(job.MinimumTierRequired, out var requiredTier))
-            requiredTier = TierLevel.Bronze; // Default to Bronze if parsing fails
-        
-        if (tier.Level < requiredTier)
-            return false;
 
-        // Check premium job access
-        if (job.IsPremium && !tier.CanAccessPremiumJobs)
-            return false;
+        if (!Enum.TryParse<TierLevel>(job.MinimumTierRequired, true, out var requiredTier))
+            requiredTier = TierLevel.Bronze;
+
+        if (tier.Level < requiredTier) return false;
+        if (job.IsPremium && !tier.CanAccessPremiumJobs) return false;
 
         return true;
     }
 
-    public List<ReputationTier> GetAllTiers()
-    {
-        return ReputationTier.GetAllTiers();
-    }
+    public List<ReputationTier> GetAllTiers() => ReputationTier.GetAllTiers();
 
     public async Task<Dictionary<string, object>> GetUserDashboardDataAsync(string walletAddress)
     {
         var scoreData = await _fairScoreService.GetScoreAsync(walletAddress);
-        var tier = ReputationTier.GetTierByScore(scoreData.Score);
+        var tier = !string.IsNullOrWhiteSpace(scoreData.Tier)
+            ? ReputationTier.GetTierByName(scoreData.Tier)
+            : ReputationTier.GetTierByScore(scoreData.Score);
+
         var votingPower = await CalculateVotingPowerAsync(walletAddress);
         var suggestions = await _fairScoreService.GetImprovementSuggestionsAsync(walletAddress);
 
         return new Dictionary<string, object>
         {
             ["score"] = scoreData.Score,
+            ["fairscoreBase"] = scoreData.FairscoreBase,
+            ["socialScore"] = scoreData.SocialScore,
+            ["fairscore"] = scoreData.Fairscore,
             ["tier"] = tier,
+            ["tierName"] = scoreData.Tier,
             ["votingPower"] = votingPower,
-            ["breakdown"] = scoreData.Breakdown,
+            ["badges"] = scoreData.Badges,
+            ["features"] = scoreData.Features,
             ["history"] = scoreData.History,
             ["suggestions"] = suggestions,
             ["nextTier"] = GetNextTier(tier)!,
@@ -95,19 +95,15 @@ public class ReputationService
     {
         var allTiers = ReputationTier.GetAllTiers();
         var currentIndex = allTiers.FindIndex(t => t.Level == currentTier.Level);
-        
         if (currentIndex >= 0 && currentIndex < allTiers.Count - 1)
             return allTiers[currentIndex + 1];
-        
         return null;
     }
 
     private int GetScoreToNextTier(int currentScore, ReputationTier currentTier)
     {
         var nextTier = GetNextTier(currentTier);
-        if (nextTier == null)
-            return 0;
-        
+        if (nextTier == null) return 0;
         return Math.Max(0, nextTier.MinScore - currentScore);
     }
 }

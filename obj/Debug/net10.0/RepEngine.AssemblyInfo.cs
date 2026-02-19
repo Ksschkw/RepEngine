@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("RepEngine")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+00799f130ba94f825a1cbd2253e406123f24762c")]
 [assembly: System.Reflection.AssemblyProductAttribute("RepEngine")]
 [assembly: System.Reflection.AssemblyTitleAttribute("RepEngine")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

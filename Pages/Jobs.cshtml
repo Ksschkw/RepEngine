@@ -1,124 +1,131 @@
 @page
-@model JobsModel
+@model RepEngine.Pages.JobsModel
 @{
     ViewData["Title"] = "Jobs";
 }
 
-<section class="container" style="padding: 3rem 0;">
-    <h1 class="mb-2">Reputation-Gated Jobs</h1>
-    <p class="text-muted mb-4">Access freelance opportunities based on your FairScore. Higher reputation unlocks premium gigs.</p>
-    
-    <div id="noWalletJobs" class="glass-card text-center" style="display: none;">
-        <h3>Connect Your Wallet</h3>
-        <p class="text-muted mb-4">Connect your wallet to view available jobs based on your reputation</p>
-        <button class="btn btn-primary" onclick="document.getElementById('walletConnectBtn')?.click()">Connect Wallet</button>
+<section class="section">
+    <div class="container">
+        <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+            <div>
+                <h1 class="mb-1">Job Board</h1>
+                <p class="text-muted text-sm">Reputation-gated freelance opportunities</p>
+            </div>
+        </div>
+
+        <!-- Connect prompt -->
+        <div id="jobsConnectPrompt" class="card text-center" style="padding:2.5rem 1rem;">
+            <h2 class="mb-2">Connect Your Wallet</h2>
+            <p class="text-muted mb-4">Connect to see jobs matching your reputation tier</p>
+            <button class="btn btn-primary" onclick="promptWalletConnection()">Connect Wallet</button>
+        </div>
+
+        <!-- Jobs list -->
+        <div id="jobsList" style="display:none;"></div>
     </div>
-    
-    <div id="jobsList" class="grid gap-3"></div>
 </section>
 
+<!-- Apply Modal -->
+<div id="applyModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeApply()">
+    <div class="modal-content">
+        <h2 class="mb-4">Apply for Job</h2>
+        <h3 id="applyJobTitle" class="mb-3"></h3>
+        <input type="hidden" id="applyJobId" />
+        <div class="form-group">
+            <label class="form-label">Cover Letter</label>
+            <textarea id="applyCover" rows="4" placeholder="Why are you a good fit?"></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Proposed Rate ($)</label>
+            <input type="number" id="applyRate" placeholder="e.g. 500" />
+        </div>
+        <div class="flex gap-3">
+            <button class="btn btn-primary btn-block" onclick="submitApplication()">Apply</button>
+            <button class="btn btn-secondary" onclick="closeApply()">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <script>
-async function loadJobs() {
-    const wallet = window.walletManager?.getCurrentWallet();
-    
-    if (!wallet) {
-        document.getElementById('noWalletJobs').style.display = 'block';
-        document.getElementById('jobsList').innerHTML = '';
+window.addEventListener('walletConnected', e => loadJobs(e.detail.wallet));
+document.addEventListener('DOMContentLoaded', () => {
+    const w = window.walletManager?.getCurrentWallet?.();
+    if (w) loadJobs(w);
+});
+
+async function loadJobs(wallet) {
+    document.getElementById('jobsConnectPrompt').style.display = 'none';
+    const list = document.getElementById('jobsList');
+    list.style.display = 'block';
+    list.innerHTML = '<div class="text-center mt-4"><div class="spinner" style="margin:0 auto"></div><p class="loading-text mt-2">Loading jobs…</p></div>';
+
+    try {
+        const res = await fetch(`/api/jobs?wallet=${encodeURIComponent(wallet)}`);
+        const data = await res.json();
+        const jobs = data.jobs ?? data;
+        renderJobs(jobs);
+    } catch (e) {
+        list.innerHTML = '<p class="text-muted text-center">Failed to load jobs</p>';
+    }
+}
+
+function renderJobs(jobs) {
+    const list = document.getElementById('jobsList');
+    if (!jobs.length) {
+        list.innerHTML = '<div class="card text-center"><p class="text-muted">No jobs available for your tier</p></div>';
         return;
     }
-    
-    document.getElementById('noWalletJobs').style.display = 'none';
-    
-    try {
-        const response = await fetch(`/api/jobs?wallet=${encodeURIComponent(wallet)}`);
-        const jobs = await response.json();
-        
-        const list = document.getElementById('jobsList');
-        
-        if (jobs.length === 0) {
-            list.innerHTML = '<div class="glass-card text-center"><p class="text-muted">No jobs available for your reputation tier. Increase your FairScore to unlock more opportunities!</p></div>';
-            return;
-        }
-        
-        list.innerHTML = jobs.map(j => `
-            <div class="job-card ${j.isPremium ? 'premium' : ''}">
-                <h3 style="margin-bottom: 0.5rem;">${j.title}</h3>
-                
-                <div class="flex gap-2 mb-3">
-                    <span class="badge badge-primary">${getTierName(j.minimumTierRequired)}</span>
-                    ${j.isPremium ? '<span class="badge badge-warning">Premium</span>' : ''}
-                </div>
-                
-                <p class="text-muted mb-3">${j.description}</p>
-                
-                <div class="flex flex-wrap gap-2 mb-3">
-                    ${j.skills.map(s => `<span class="skill-tag">${s}</span>`).join('')}
-                </div>
-                
-                <div class="flex justify-between items-center">
-                    <div>
-                        <div class="job-budget">$${j.budget.toLocaleString()}</div>
-                        <div class="text-muted" style="font-size: 0.875rem;">
-                            ${j.applicationCount} applications
-                            ${j.deadline ? '• Due ' + new Date(j.deadline).toLocaleDateString() : ''}
-                        </div>
-                    </div>
-                    <button class="btn btn-primary" onclick="applyToJob(${j.id})">Apply Now</button>
-                </div>
+    list.innerHTML = jobs.map(j => `
+        <div class="card card-interactive mb-3${j.isPremium ? ' premium-glow' : ''}">
+            <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                <h3 style="margin:0">${j.title}</h3>
+                ${j.isPremium ? '<span class="badge badge-warning">⭐ PREMIUM</span>' : ''}
             </div>
-        `).join('');
-    } catch (error) {
-        console.error('Error loading jobs:', error);
-    }
+            <p class="text-sm text-muted mb-3">${j.description}</p>
+            <div class="flex gap-2 flex-wrap mb-3">
+                ${(j.skills??[]).map(s => `<span class="skill-tag">${s}</span>`).join('')}
+            </div>
+            <div class="flex justify-between items-center flex-wrap gap-2">
+                <div>
+                    <span class="font-bold text-accent text-lg">$${(j.budget??0).toLocaleString()}</span>
+                    <span class="text-xs text-muted ml-2">Min: ${j.requiredTier ?? 'Any'}</span>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="openApply(${j.id}, '${j.title.replace(/'/g,"\\'")}')">Apply</button>
+            </div>
+        </div>
+    `).join('');
 }
 
-function getTierName(tierLevel) {
-    const tiers = ['Unranked', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'];
-    return tiers[tierLevel] || 'Unknown';
+function openApply(id, title) {
+    document.getElementById('applyJobId').value = id;
+    document.getElementById('applyJobTitle').textContent = title;
+    document.getElementById('applyModal').style.display = 'flex';
 }
+function closeApply() { document.getElementById('applyModal').style.display = 'none'; }
 
-async function applyToJob(jobId) {
-    const wallet = window.walletManager?.getCurrentWallet();
-    if (!wallet) {
-        alert('Please connect your wallet first');
-        return;
-    }
-    
-    const coverLetter = prompt('Cover Letter (why you\'re a good fit):');
-    if (!coverLetter) return;
-    
-    const rate = parseFloat(prompt('Your Proposed Rate ($):'));
-    if (isNaN(rate) || rate <= 0) {
-        alert('Invalid rate');
-        return;
-    }
-    
+async function submitApplication() {
+    const wallet = window.walletManager?.getCurrentWallet?.();
+    if (!wallet) { alert('Connect your wallet first'); return; }
+    const jobId = parseInt(document.getElementById('applyJobId').value);
+    const cover = document.getElementById('applyCover').value.trim();
+    const rate  = parseFloat(document.getElementById('applyRate').value);
+    if (!cover || !rate) { alert('Fill in all fields'); return; }
+
     try {
-        const response = await fetch('/api/jobs/apply', {
+        const res = await fetch('/api/jobs/apply', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                jobId,
-                freelancerWallet: wallet,
-                coverLetter,
-                proposedRate: rate
-            })
+            body: JSON.stringify({ jobId, walletAddress: wallet, coverLetter: cover, proposedRate: rate })
         });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            alert(error.error || 'Failed to apply');
-            return;
+        if (res.ok) { closeApply(); alert('Application submitted!'); }
+        else {
+            const err = await res.json().catch(() => ({}));
+            alert(err.error || 'Application failed');
         }
-        
-        alert('Application submitted successfully! 🎉');
-        loadJobs();
-    } catch (error) {
-        alert('Error applying to job: ' + error.message);
-    }
+    } catch (e) { alert('Failed: ' + e.message); }
 }
-
-document.addEventListener('DOMContentLoaded', loadJobs);
-window.addEventListener('walletConnected', loadJobs);
-window.addEventListener('walletDisconnected', loadJobs);
 </script>
+
+<style>
+.premium-glow { border-color: rgba(245,158,11,.3); box-shadow: 0 0 20px rgba(245,158,11,.08); }
+</style>

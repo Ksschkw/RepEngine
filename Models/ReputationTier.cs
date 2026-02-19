@@ -121,4 +121,15 @@ public class ReputationTier
         return tiers.FirstOrDefault(t => score >= t.MinScore && score <= t.MaxScore) 
                ?? tiers.First();
     }
+
+    /// <summary>
+    /// Maps the FairScale API tier string ("bronze", "silver", "gold", "platinum")
+    /// to a ReputationTier.  Case-insensitive.
+    /// </summary>
+    public static ReputationTier GetTierByName(string tierName)
+    {
+        var tiers = GetAllTiers();
+        return tiers.FirstOrDefault(t => t.Name.Equals(tierName, StringComparison.OrdinalIgnoreCase))
+               ?? tiers.First(); // fallback to Unranked
+    }
 }
