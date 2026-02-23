@@ -1,0 +1,332 @@
+@page
+@model RepEngine.Pages.PostJobModel
+@{
+    ViewData["Title"] = "Post a Gig";
+}
+
+<section class="section">
+    <div class="container" style="max-width: 780px;">
+        <h1 class="mb-2">Post a Freelance Gig</h1>
+        <p class="text-muted mb-6">Create a job listing — restrict applicants by FairScore tier and minimum reputation score.</p>
+
+        <!-- Connect Prompt (hidden if connected) -->
+        <div id="connectPrompt" class="card text-center mb-6" style="padding:2.5rem 1rem;">
+            <h2 class="mb-3 text-warning">Wallet Required</h2>
+            <p class="text-muted mb-4">You must connect your Solana wallet to post a job.</p>
+            <button class="btn btn-primary" onclick="window.walletManager.promptWalletConnection()">Connect Wallet</button>
+        </div>
+
+        <div id="postJobForm" class="card fade-in" style="display:none; padding: 2rem;">
+            <!-- Step Progress -->
+            <div class="flex items-center gap-2 mb-6" id="stepProgress">
+                <div class="step-indicator active" data-step="1"><span>1</span> Basics</div>
+                <div class="step-divider"></div>
+                <div class="step-indicator" data-step="2"><span>2</span> Details</div>
+                <div class="step-divider"></div>
+                <div class="step-indicator" data-step="3"><span>3</span> Access</div>
+            </div>
+
+            <form id="jobForm" onsubmit="submitJob(event)">
+                <!-- Step 1: Basics -->
+                <div id="step1" class="form-step">
+                    <div class="form-group mb-4">
+                        <label class="form-label" for="jobTitle">Job Title *</label>
+                        <input type="text" id="jobTitle" required placeholder="e.g. Smart Contract Auditor Needed" />
+                    </div>
+                    
+                    <div class="form-group mb-4">
+                        <label class="form-label" for="jobDescription">Description *</label>
+                        <textarea id="jobDescription" rows="5" required placeholder="Describe the scope of work, deliverables, and requirements in detail..."></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 md-grid-cols-2 gap-4 mb-4">
+                        <div class="form-group">
+                            <label class="form-label" for="jobCategory">Category</label>
+                            <select id="jobCategory">
+                                <option value="Development">💻 Development</option>
+                                <option value="Design">🎨 Design</option>
+                                <option value="Smart Contracts">📜 Smart Contracts</option>
+                                <option value="Security">🔒 Security / Auditing</option>
+                                <option value="Marketing">📣 Marketing</option>
+                                <option value="Content">✍️ Content & Writing</option>
+                                <option value="DeFi">🏦 DeFi</option>
+                                <option value="NFT">🖼️ NFT</option>
+                                <option value="Data & Analytics">📊 Data & Analytics</option>
+                                <option value="Community">🤝 Community Management</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="jobExperience">Experience Level</label>
+                            <select id="jobExperience">
+                                <option value="Entry">Entry Level</option>
+                                <option value="Intermediate" selected>Intermediate</option>
+                                <option value="Expert">Expert</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button type="button" class="btn btn-primary" onclick="goToStep(2)">Next →</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Budget & Details -->
+                <div id="step2" class="form-step" style="display:none;">
+                    <div class="grid grid-cols-1 md-grid-cols-2 gap-4 mb-4">
+                        <div class="form-group">
+                            <label class="form-label" for="jobBudget">Budget *</label>
+                            <input type="number" id="jobBudget" required min="1" placeholder="e.g. 2500" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="jobBudgetType">Budget Type</label>
+                            <select id="jobBudgetType">
+                                <option value="Fixed">Fixed Price</option>
+                                <option value="Hourly">Hourly Rate</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md-grid-cols-2 gap-4 mb-4">
+                        <div class="form-group">
+                            <label class="form-label" for="jobCurrency">Payment Currency</label>
+                            <select id="jobCurrency">
+                                <option value="USDC">💲 USDC</option>
+                                <option value="USDT">💵 USDT</option>
+                                <option value="SOL">◎ SOL</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="jobLength">Project Length</label>
+                            <select id="jobLength">
+                                <option value="Short">Short (&lt; 1 week)</option>
+                                <option value="Medium">Medium (1–4 weeks)</option>
+                                <option value="Long">Long (1+ months)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md-grid-cols-2 gap-4 mb-4">
+                        <div class="form-group">
+                            <label class="form-label" for="jobLocation">Location</label>
+                            <select id="jobLocation">
+                                <option value="Remote">🌍 Remote</option>
+                                <option value="On-site">📍 On-site</option>
+                                <option value="Hybrid">🔄 Hybrid</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="jobDeadline">Deadline (optional)</label>
+                            <input type="date" id="jobDeadline" />
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-4">
+                        <label class="form-label" for="jobSkills">Required Skills (comma separated)</label>
+                        <input type="text" id="jobSkills" placeholder="e.g. React, Solana, Rust, Anchor" />
+                    </div>
+
+                    <div class="form-group mb-5">
+                        <label class="form-label" for="jobTags">Tags (comma separated)</label>
+                        <input type="text" id="jobTags" placeholder="e.g. urgent, remote, web3, DeFi" />
+                    </div>
+
+                    <div class="flex justify-between">
+                        <button type="button" class="btn btn-secondary" onclick="goToStep(1)">← Back</button>
+                        <button type="button" class="btn btn-primary" onclick="goToStep(3)">Next →</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Reputation Gating -->
+                <div id="step3" class="form-step" style="display:none;">
+                    <div class="card mb-4" style="background:var(--bg-tertiary); padding:1.25rem; border-left:3px solid var(--accent-primary);">
+                        <h3 class="mb-2" style="font-size:1rem;">🔐 FairScore Access Control</h3>
+                        <p class="text-sm text-muted">Control who can view and apply to your job based on their on-chain reputation. Higher requirements mean fewer but more trusted applicants.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md-grid-cols-2 gap-4 mb-4">
+                        <div class="form-group">
+                            <label class="form-label" for="jobVisibility">Job Visibility</label>
+                            <select id="jobVisibility" onchange="toggleVisibilityHelp()">
+                                <option value="Public">🌐 Public — Visible to all</option>
+                                <option value="TierGated">🔒 Tier-Gated — Only qualified users</option>
+                                <option value="Private">🔐 Private — Only you</option>
+                            </select>
+                            <p id="visibilityHelp" class="text-xs text-muted mt-1"></p>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="jobTier">Min. Tier Required to Apply</label>
+                            <select id="jobTier">
+                                <option value="Unranked">⚪ Unranked (Anyone)</option>
+                                <option value="Bronze">🥉 Bronze (Score 20+)</option>
+                                <option value="Silver">🥈 Silver (Score 40+)</option>
+                                <option value="Gold">🥇 Gold (Score 60+)</option>
+                                <option value="Platinum">💎 Platinum (Score 80+)</option>
+                                <option value="Diamond">💠 Diamond (Score 95+)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md-grid-cols-2 gap-4 mb-5">
+                        <div class="form-group">
+                            <label class="form-label" for="jobMinScore">Min. FairScore (0–100)</label>
+                            <input type="number" id="jobMinScore" min="0" max="100" value="0" placeholder="e.g. 50" />
+                            <p class="text-xs text-muted mt-1">Fine-grained control: require an exact minimum score.</p>
+                        </div>
+                        <div class="form-group flex items-end gap-3" style="padding-bottom:0.25rem;">
+                            <label class="flex items-center gap-2 cursor-pointer text-sm" style="user-select:none;">
+                                <input type="checkbox" id="jobPremium" style="width:auto; accent-color:var(--accent-primary);" />
+                                💎 Mark as Premium Gig
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between">
+                        <button type="button" class="btn btn-secondary" onclick="goToStep(2)">← Back</button>
+                        <button type="submit" id="submitBtn" class="btn btn-primary btn-lg" style="min-width:180px;">🚀 Post Job</button>
+                    </div>
+                    <div id="submitStatus" class="mt-3 text-center text-sm"></div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<style>
+    .step-indicator {
+        display:flex; align-items:center; gap:6px;
+        font-size:0.8rem; color:var(--text-muted);
+        padding:0.4rem 0.8rem; border-radius:20px;
+        background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06);
+        transition: all 0.2s;
+    }
+    .step-indicator span { font-weight:700; }
+    .step-indicator.active { background:rgba(139,92,246,0.15); color:var(--accent-primary); border-color:var(--accent-primary); }
+    .step-indicator.completed { background:rgba(16,185,129,0.15); color:var(--accent-success); border-color:var(--accent-success); }
+    .step-divider { flex:1; height:2px; background:rgba(255,255,255,0.06); min-width:16px; }
+</style>
+
+<script>
+    let currentStep = 1;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const wallet = window.walletManager?.getCurrentWallet?.();
+        if (wallet) {
+            document.getElementById('connectPrompt').style.display = 'none';
+            document.getElementById('postJobForm').style.display = 'block';
+        }
+        toggleVisibilityHelp();
+    });
+
+    window.addEventListener('walletConnected', () => {
+        document.getElementById('connectPrompt').style.display = 'none';
+        document.getElementById('postJobForm').style.display = 'block';
+    });
+
+    function goToStep(step) {
+        // Validate current step before proceeding
+        if (step > currentStep) {
+            if (currentStep === 1) {
+                if (!document.getElementById('jobTitle').value.trim() || !document.getElementById('jobDescription').value.trim()) {
+                    showNotification('Please fill in the title and description.', 'warning');
+                    return;
+                }
+            }
+            if (currentStep === 2) {
+                if (!document.getElementById('jobBudget').value) {
+                    showNotification('Please set a budget.', 'warning');
+                    return;
+                }
+            }
+        }
+
+        document.querySelectorAll('.form-step').forEach(s => s.style.display = 'none');
+        document.getElementById(`step${step}`).style.display = 'block';
+
+        // Update progress
+        document.querySelectorAll('.step-indicator').forEach(ind => {
+            const s = parseInt(ind.dataset.step);
+            ind.classList.remove('active', 'completed');
+            if (s < step) ind.classList.add('completed');
+            if (s === step) ind.classList.add('active');
+        });
+
+        currentStep = step;
+    }
+
+    function toggleVisibilityHelp() {
+        const val = document.getElementById('jobVisibility').value;
+        const help = document.getElementById('visibilityHelp');
+        const hints = {
+            'Public': 'Everyone can see and apply (tier requirements still apply).',
+            'TierGated': 'Only users meeting both tier AND minimum FairScore can see this job.',
+            'Private': 'Only you can see this job. Useful for drafts.'
+        };
+        help.textContent = hints[val] || '';
+    }
+
+    async function submitJob(event) {
+        event.preventDefault();
+        
+        const wallet = window.walletManager?.getCurrentWallet?.();
+        if (!wallet) {
+            showNotification('Your wallet is not connected!', 'error');
+            return;
+        }
+
+        const submitBtn = document.getElementById('submitBtn');
+        const submitStatus = document.getElementById('submitStatus');
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Posting...';
+        submitStatus.innerHTML = '';
+
+        try {
+            const listSkills = document.getElementById('jobSkills').value
+                .split(',').map(s => s.trim()).filter(s => s.length > 0);
+            const listTags = document.getElementById('jobTags').value
+                .split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+            const deadlineVal = document.getElementById('jobDeadline').value;
+
+            const payload = {
+                title: document.getElementById('jobTitle').value,
+                description: document.getElementById('jobDescription').value,
+                budget: parseFloat(document.getElementById('jobBudget').value),
+                budgetType: document.getElementById('jobBudgetType').value,
+                paymentCurrency: document.getElementById('jobCurrency').value,
+                category: document.getElementById('jobCategory').value,
+                experienceLevel: document.getElementById('jobExperience').value,
+                projectLength: document.getElementById('jobLength').value,
+                minimumTierRequired: document.getElementById('jobTier').value,
+                minimumFairScore: parseInt(document.getElementById('jobMinScore').value) || 0,
+                visibility: document.getElementById('jobVisibility').value,
+                clientWallet: wallet,
+                skills: listSkills,
+                tags: listTags,
+                location: document.getElementById('jobLocation').value,
+                isPremium: document.getElementById('jobPremium').checked,
+                deadline: deadlineVal ? new Date(deadlineVal).toISOString() : null
+            };
+
+            const response = await fetch('/api/jobs/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to post job');
+            }
+
+            submitStatus.innerHTML = '<span class="text-success">✅ Job posted successfully! Redirecting...</span>';
+            showNotification('Your job has been posted! 🎉', 'success');
+            setTimeout(() => { window.location.href = '/Marketplace'; }, 1200);
+
+        } catch (err) {
+            submitStatus.innerHTML = `<span class="text-danger">❌ Error: ${err.message}</span>`;
+            submitBtn.disabled = false;
+            submitBtn.textContent = '🚀 Post Job';
+        }
+    }
+</script>

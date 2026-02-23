@@ -1,0 +1,414 @@
+@page
+@model RepEngine.Pages.MarketplaceModel
+@{
+    ViewData["Title"] = "Gigs Marketplace";
+}
+
+<section class="section">
+    <div class="container">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+            <div>
+                <h1 class="mb-1">Freelance Marketplace</h1>
+                <p class="text-muted text-sm">Browse Web3 jobs secured by FairScale reputation. Your score unlocks opportunities.</p>
+            </div>
+            <div class="flex gap-2">
+                <a href="/PostJob" class="btn btn-primary">+ Post a Gig</a>
+            </div>
+        </div>
+
+        <!-- Platform Stats Bar -->
+        <div id="platformStats" class="grid grid-cols-2 md-grid-cols-4 gap-3 mb-5">
+            <div class="stat-card"><div class="stat-value" id="statOpen">--</div><div class="stat-label">Open Gigs</div></div>
+            <div class="stat-card"><div class="stat-value" id="statFreelancers">--</div><div class="stat-label">Freelancers</div></div>
+            <div class="stat-card"><div class="stat-value" id="statContracts">--</div><div class="stat-label">Active Contracts</div></div>
+            <div class="stat-card"><div class="stat-value" id="statVolume">--</div><div class="stat-label">Total Volume</div></div>
+        </div>
+
+        <!-- Search & Filters -->
+        <div class="card mb-5" style="padding:1.25rem;">
+            <div class="grid grid-cols-1 md-grid-cols-4 gap-3">
+                <div class="form-group" style="grid-column: span 2;">
+                    <input type="text" id="searchQuery" placeholder="🔍 Search jobs by title, description, skills..." oninput="debounceSearch()" />
+                </div>
+                <div class="form-group">
+                    <select id="filterCategory" onchange="filterJobs()">
+                        <option value="All">📂 All Categories</option>
+                        <option value="Development">💻 Development</option>
+                        <option value="Design">🎨 Design</option>
+                        <option value="Smart Contracts">📜 Smart Contracts</option>
+                        <option value="Security">🔒 Security</option>
+                        <option value="Marketing">📣 Marketing</option>
+                        <option value="Content">✍️ Content</option>
+                        <option value="DeFi">🏦 DeFi</option>
+                        <option value="NFT">🖼️ NFT</option>
+                        <option value="Data & Analytics">📊 Analytics</option>
+                        <option value="Community">🤝 Community</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <select id="filterExperience" onchange="filterJobs()">
+                        <option value="All">🎯 All Levels</option>
+                        <option value="Entry">Entry Level</option>
+                        <option value="Intermediate">Intermediate</option>
+                        <option value="Expert">Expert</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 md-grid-cols-4 gap-3 mt-3">
+                <div class="form-group">
+                    <select id="filterTier" onchange="filterJobs()">
+                        <option value="All">🏅 All Tiers</option>
+                        <option value="Unranked">⚪ Unranked</option>
+                        <option value="Bronze">🥉 Bronze</option>
+                        <option value="Silver">🥈 Silver</option>
+                        <option value="Gold">🥇 Gold</option>
+                        <option value="Platinum">💎 Platinum</option>
+                        <option value="Diamond">💠 Diamond</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <select id="filterBudgetType" onchange="filterJobs()">
+                        <option value="All">💰 All Budget Types</option>
+                        <option value="Fixed">Fixed Price</option>
+                        <option value="Hourly">Hourly</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <select id="filterSort" onchange="filterJobs()">
+                        <option value="newest">📅 Newest First</option>
+                        <option value="budget-high">💰 Budget: High→Low</option>
+                        <option value="budget-low">💰 Budget: Low→High</option>
+                        <option value="applicants">👥 Most Applicants</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <button class="btn btn-secondary w-full" onclick="clearFilters()">✕ Clear Filters</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connect Prompt (hidden if connected) -->
+        <div id="connectPrompt" class="card text-center mb-5" style="padding:2rem 1rem;">
+            <p class="text-muted mb-4">Connect your wallet to see which jobs your FairScore unlocks.</p>
+            <button class="btn btn-primary" onclick="window.walletManager.promptWalletConnection()">Connect Wallet</button>
+        </div>
+
+        <!-- Job Count -->
+        <div class="flex justify-between items-center mb-3">
+            <p id="jobCount" class="text-sm text-muted">Loading...</p>
+            <div id="userTierBadge" style="display:none;"></div>
+        </div>
+
+        <!-- Job Grid Container -->
+        <div id="jobsContainer" class="grid grid-cols-1 gap-3 fade-in" style="min-height: 40vh;">
+            <div class="flex flex-col items-center justify-center py-10">
+                <div class="spinner mb-3"></div>
+                <p class="loading-text">Loading freelance gigs...</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Apply Modal -->
+<div id="applyModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div class="card fade-in" style="width: 90%; max-width: 560px; padding: 2rem; max-height: 90vh; overflow-y: auto;">
+        <h3 class="mb-1" id="applyJobTitle">Apply for Job</h3>
+        <p class="text-sm text-muted mb-4" id="applyJobBudget"></p>
+        
+        <form id="applyForm" onsubmit="submitApplication(event)">
+            <input type="hidden" id="applyJobId" />
+            
+            <div class="form-group mb-4">
+                <label class="form-label" for="applyCoverLetter">Cover Letter / Pitch *</label>
+                <textarea id="applyCoverLetter" rows="4" required placeholder="Why are you the best fit for this gig? Highlight relevant experience..."></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 md-grid-cols-2 gap-4 mb-4">
+                <div class="form-group">
+                    <label class="form-label" for="applyRate">Proposed Rate *</label>
+                    <input type="number" id="applyRate" required min="1" placeholder="e.g. 1500" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="applyDeliveryDays">Delivery (Days) *</label>
+                    <input type="number" id="applyDeliveryDays" required min="1" placeholder="e.g. 5" />
+                </div>
+            </div>
+
+            <div class="form-group mb-4">
+                <label class="form-label" for="applyPortfolio">Portfolio Links (optional)</label>
+                <input type="text" id="applyPortfolio" placeholder="https://github.com/..., https://dribbble.com/..." />
+            </div>
+
+            <div class="form-group mb-5">
+                <label class="form-label" for="applyAvailability">Availability</label>
+                <select id="applyAvailability">
+                    <option value="Immediate">Immediate</option>
+                    <option value="1 Week">Within 1 Week</option>
+                    <option value="2 Weeks">Within 2 Weeks</option>
+                    <option value="1 Month">Within 1 Month</option>
+                </select>
+            </div>
+
+            <div class="flex gap-3">
+                <button type="submit" id="submitAppBtn" class="btn btn-primary flex-1">🚀 Send Application</button>
+                <button type="button" class="btn btn-secondary" onclick="closeApplyModal()">Cancel</button>
+            </div>
+            <div id="applyStatus" class="mt-3 text-center text-sm"></div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let allJobsList = [];
+    let filteredJobs = [];
+    let userTier = 'Unranked';
+    let userScore = 0;
+    const tierHierarchy = { 'unranked': 0, 'bronze': 1, 'silver': 2, 'gold': 3, 'platinum': 4, 'diamond': 5 };
+    let debounceTimer = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadMarketplace();
+        loadPlatformStats();
+    });
+
+    window.addEventListener('walletConnected', async (e) => {
+        document.getElementById('connectPrompt').style.display = 'none';
+        await fetchUserTier(e.detail.wallet);
+        renderJobs();
+    });
+
+    async function fetchUserTier(wallet) {
+        try {
+            const res = await fetch(`/api/fairscore?wallet=${encodeURIComponent(wallet)}`);
+            if (res.ok) {
+                const data = await res.json();
+                userTier = data.tier?.name ?? data.tier ?? 'Unranked';
+                userScore = data.score ?? 0;
+                // Show user's tier badge
+                const badge = document.getElementById('userTierBadge');
+                badge.style.display = 'inline-block';
+                const icons = { unranked:'⚪', bronze:'🥉', silver:'🥈', gold:'🥇', platinum:'💎', diamond:'💠' };
+                badge.innerHTML = `<span class="tier-badge tier-${userTier.toLowerCase()}" style="font-size:0.75rem;">${icons[userTier.toLowerCase()]||'⚪'} Your Tier: ${userTier} (Score: ${userScore})</span>`;
+            }
+        } catch(e) { console.error('Error fetching tier', e); }
+    }
+
+    async function loadPlatformStats() {
+        try {
+            const res = await fetch('/api/stats');
+            const stats = await res.json();
+            document.getElementById('statOpen').textContent = stats.openJobs?.toLocaleString() ?? '0';
+            document.getElementById('statFreelancers').textContent = stats.totalFreelancers?.toLocaleString() ?? '0';
+            document.getElementById('statContracts').textContent = stats.activeContracts?.toLocaleString() ?? '0';
+            document.getElementById('statVolume').textContent = '$' + (stats.totalVolume?.toLocaleString() ?? '0');
+        } catch(e) { console.error('Stats error', e); }
+    }
+
+    async function loadMarketplace() {
+        const wallet = window.walletManager?.getCurrentWallet?.();
+        if (wallet) {
+            document.getElementById('connectPrompt').style.display = 'none';
+            await fetchUserTier(wallet);
+        }
+
+        try {
+            const jobsRes = await fetch('/api/jobs/all');
+            allJobsList = await jobsRes.json();
+            filteredJobs = [...allJobsList];
+            renderJobs();
+        } catch (err) {
+            document.getElementById('jobsContainer').innerHTML = `
+                <div class="flex flex-col items-center justify-center py-10 gap-3">
+                    <p class="text-danger">Error loading jobs: ${err.message}</p>
+                    <button class="btn btn-secondary" onclick="loadMarketplace()">↻ Refresh</button>
+                </div>`;
+        }
+    }
+
+    function debounceSearch() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(filterJobs, 300);
+    }
+
+    function filterJobs() {
+        const query = document.getElementById('searchQuery').value.toLowerCase();
+        const category = document.getElementById('filterCategory').value;
+        const experience = document.getElementById('filterExperience').value;
+        const tier = document.getElementById('filterTier').value;
+        const budgetType = document.getElementById('filterBudgetType').value;
+        const sort = document.getElementById('filterSort').value;
+
+        filteredJobs = allJobsList.filter(job => {
+            if (query && !job.title.toLowerCase().includes(query) && !job.description.toLowerCase().includes(query) && !(job.skills||[]).some(s => s.toLowerCase().includes(query))) return false;
+            if (category !== 'All' && job.category !== category) return false;
+            if (experience !== 'All' && job.experienceLevel !== experience) return false;
+            if (tier !== 'All' && job.minimumTierRequired !== tier) return false;
+            if (budgetType !== 'All' && job.budgetType !== budgetType) return false;
+            return true;
+        });
+
+        // Sort
+        if (sort === 'budget-high') filteredJobs.sort((a, b) => b.budget - a.budget);
+        else if (sort === 'budget-low') filteredJobs.sort((a, b) => a.budget - b.budget);
+        else if (sort === 'applicants') filteredJobs.sort((a, b) => b.applicationCount - a.applicationCount);
+        else filteredJobs.sort((a, b) => new Date(b.postedAt) - new Date(a.postedAt));
+
+        renderJobs();
+    }
+
+    function clearFilters() {
+        document.getElementById('searchQuery').value = '';
+        document.getElementById('filterCategory').value = 'All';
+        document.getElementById('filterExperience').value = 'All';
+        document.getElementById('filterTier').value = 'All';
+        document.getElementById('filterBudgetType').value = 'All';
+        document.getElementById('filterSort').value = 'newest';
+        filteredJobs = [...allJobsList];
+        renderJobs();
+    }
+
+    function renderJobs() {
+        const container = document.getElementById('jobsContainer');
+        const wallet = window.walletManager?.getCurrentWallet?.();
+        const countEl = document.getElementById('jobCount');
+
+        if (filteredJobs.length === 0) {
+            container.innerHTML = `<div class="card text-center text-muted py-6">No jobs match your filters. Try adjusting your search!</div>`;
+            countEl.textContent = '0 jobs found';
+            return;
+        }
+
+        countEl.textContent = `${filteredJobs.length} job${filteredJobs.length === 1 ? '' : 's'} found`;
+        const myNavRank = tierHierarchy[userTier.toLowerCase()] || 0;
+
+        container.innerHTML = filteredJobs.map(job => {
+            const jobReqRank = tierHierarchy[(job.minimumTierRequired||'unranked').toLowerCase()] || 0;
+            const isLocked = myNavRank < jobReqRank;
+            const isScoreLocked = job.minimumFairScore > 0 && userScore < job.minimumFairScore;
+            const locked = isLocked || isScoreLocked;
+            
+            const skillsHtml = (job.skills || []).map(s => `<span class="skill-tag">${s}</span>`).join(' ');
+            const tagsHtml = (job.tags || []).map(t => `<span class="skill-tag" style="background:rgba(139,92,246,0.1);color:var(--accent-primary);border-color:rgba(139,92,246,0.2);">#${t}</span>`).join(' ');
+            
+            const levelBadge = { 'Entry': '🟢', 'Intermediate': '🟡', 'Expert': '🔴' };
+            const catIcons = { 'Development':'💻', 'Design':'🎨', 'Smart Contracts':'📜', 'Security':'🔒', 'Marketing':'📣', 'Content':'✍️', 'DeFi':'🏦', 'NFT':'🖼️', 'Data & Analytics':'📊', 'Community':'🤝' };
+
+            let actionBtnHtml = '';
+            if (!wallet) {
+                actionBtnHtml = `<button class="btn btn-secondary btn-sm" onclick="window.walletManager.promptWalletConnection()">Connect to Apply</button>`;
+            } else if (job.clientWallet === wallet) {
+                actionBtnHtml = `<span class="badge badge-info">Your Listing</span>`;
+            } else if (locked) {
+                const reason = isScoreLocked ? `Score ${job.minimumFairScore}+` : job.minimumTierRequired;
+                actionBtnHtml = `<button class="btn btn-secondary btn-sm" disabled style="opacity:0.6; cursor:not-allowed">🔒 Unlock at ${reason}</button>`;
+            } else {
+                actionBtnHtml = `<button class="btn btn-primary btn-sm" onclick="openApplyModal(${job.id}, '${job.title.replace(/'/g, "\\'")}', ${job.budget}, '${job.budgetType||'Fixed'}')">Apply Now</button>`;
+            }
+
+            const timeAgo = getTimeAgo(new Date(job.postedAt));
+
+            return `
+                <div class="card card-interactive transition-all flex flex-col md-flex-row gap-5 justify-between items-start md:items-center px-5 py-4 border-l-4" style="border-left-color: ${locked ? 'rgba(255,255,255,0.06)' : 'var(--accent-primary)'}">
+                    <div class="flex-1 w-full text-left">
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <h2 class="text-lg font-bold text-primary m-0 p-0">${job.title}</h2>
+                            ${job.isPremium ? '<span class="badge badge-warning">💎 Premium</span>' : ''}
+                            ${job.visibility === 'TierGated' ? '<span class="badge" style="background:rgba(139,92,246,0.15);color:var(--accent-primary);border:1px solid rgba(139,92,246,0.3);font-size:0.65rem;">🔐 Gated</span>' : ''}
+                        </div>
+                        <p class="text-muted text-sm mb-3 leading-relaxed" style="max-width:700px;">${job.description?.substring(0, 200)}${(job.description?.length > 200) ? '...' : ''}</p>
+                        
+                        <div class="flex flex-wrap gap-1 mb-3">
+                            ${skillsHtml} ${tagsHtml}
+                        </div>
+
+                        <div class="flex flex-wrap gap-4 text-xs text-muted">
+                            <span title="Category">${catIcons[job.category]||'💼'} ${job.category || 'General'}</span>
+                            <span title="Experience">${levelBadge[job.experienceLevel]||'🟡'} ${job.experienceLevel || 'Any'}</span>
+                            <span title="Budget"><strong class="text-primary text-sm">$${job.budget?.toLocaleString()}</strong> ${job.budgetType === 'Hourly' ? '/hr' : ''}</span>
+                            <span title="Applicants">👥 <strong class="text-primary">${job.applicationCount}</strong></span>
+                            <span class="tier-badge tier-${(job.minimumTierRequired||'unranked').toLowerCase()}" style="font-size:0.6rem; padding:0.15rem 0.5rem; border-width:1px;">Req: ${job.minimumTierRequired}${job.minimumFairScore > 0 ? ' (' + job.minimumFairScore + '+)' : ''}</span>
+                            <span title="Posted">⏱️ ${timeAgo}</span>
+                        </div>
+                    </div>
+                    <div class="w-full md:w-auto mt-3 md:mt-0 flex">
+                        ${actionBtnHtml}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function getTimeAgo(date) {
+        const seconds = Math.floor((new Date() - date) / 1000);
+        if (seconds < 60) return 'Just now';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        const days = Math.floor(hours / 24);
+        if (days < 7) return `${days}d ago`;
+        return date.toLocaleDateString();
+    }
+
+    /* Modal Logic */
+    function openApplyModal(jobId, title, budget, budgetType) {
+        document.getElementById('applyJobId').value = jobId;
+        document.getElementById('applyJobTitle').textContent = `Apply for: ${title}`;
+        document.getElementById('applyJobBudget').textContent = `Budget: $${budget.toLocaleString()} ${budgetType === 'Hourly' ? '/hr' : '(Fixed)'}`;
+        document.getElementById('applyRate').value = budget;
+        document.getElementById('applyModal').style.display = 'flex';
+    }
+
+    function closeApplyModal() {
+        document.getElementById('applyModal').style.display = 'none';
+        document.getElementById('applyStatus').innerHTML = '';
+        document.getElementById('applyForm').reset();
+    }
+
+    async function submitApplication(e) {
+        e.preventDefault();
+        const wallet = window.walletManager?.getCurrentWallet?.();
+        if (!wallet) return;
+
+        const btn = document.getElementById('submitAppBtn');
+        const status = document.getElementById('applyStatus');
+        btn.disabled = true;
+        btn.textContent = '⏳ Submitting...';
+        status.innerHTML = '';
+
+        const payload = {
+            jobId: parseInt(document.getElementById('applyJobId').value),
+            freelancerWallet: wallet,
+            coverLetter: document.getElementById('applyCoverLetter').value,
+            proposedRate: parseFloat(document.getElementById('applyRate').value),
+            deliveryDays: parseInt(document.getElementById('applyDeliveryDays').value),
+            portfolioLinks: document.getElementById('applyPortfolio').value,
+            availability: document.getElementById('applyAvailability').value
+        };
+
+        try {
+            const res = await fetch('/api/jobs/apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to apply');
+            }
+
+            status.innerHTML = '<span class="text-success">✅ Application sent! Your FairScore was recorded.</span>';
+            showNotification('Application sent successfully! 🚀', 'success');
+            setTimeout(() => {
+                closeApplyModal();
+                loadMarketplace();
+            }, 1200);
+
+        } catch (err) {
+            status.innerHTML = `<span class="text-danger">❌ ${err.message}</span>`;
+            btn.disabled = false;
+            btn.textContent = '🚀 Send Application';
+        }
+    }
+</script>

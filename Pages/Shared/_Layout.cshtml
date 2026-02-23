@@ -31,7 +31,8 @@
                 <a class="dnav-link" asp-area="" asp-page="/Index">Home</a>
                 <a class="dnav-link" asp-area="" asp-page="/Dashboard">Dashboard</a>
                 <a class="dnav-link" asp-area="" asp-page="/Governance">Governance</a>
-                <a class="dnav-link" asp-area="" asp-page="/Jobs">Jobs</a>
+                <a class="dnav-link" asp-area="" asp-page="/Marketplace">Gigs</a>
+                <a class="dnav-link" asp-area="" asp-page="/PostJob">Post</a>
                 <button id="walletConnectBtnDesktop" class="dnav-wallet">
                     <span id="walletBtnTextDesktop">Connect Wallet</span>
                 </button>
@@ -87,14 +88,40 @@
             </svg>
             <span class="bnav-label">Govern</span>
         </a>
-        <a class="bnav-item" href="/Jobs" data-page="Jobs">
+        <a class="bnav-item" href="/Marketplace" data-page="Marketplace">
             <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <rect x="2" y="7" width="20" height="14" rx="2"/>
                 <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
             </svg>
-            <span class="bnav-label">Jobs</span>
+            <span class="bnav-label">Gigs</span>
+        </a>
+        <a class="bnav-item" href="/PostJob" data-page="PostJob">
+            <svg class="bnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M12 5v14m7-7H5" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span class="bnav-label">Post</span>
         </a>
     </nav>
+
+    <!-- ═══ WALLET MODAL ═══ -->
+    <div id="walletModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center; backdrop-filter: blur(4px);">
+        <div class="card fade-in" style="width: 90%; max-width: 380px; padding: 2.5rem 2rem;">
+            <h3 class="mb-3 text-center">Connect Wallet</h3>
+            <p class="text-sm text-muted text-center mb-5">
+                Select your Solana wallet to authenticate.<br/><br/>
+                <span style="font-size: 0.85em; opacity: 0.8;">If you don't have the extension installed, you will be redirected to get it. On mobile, this will open your wallet app.</span>
+            </p>
+            <div class="flex flex-col gap-3">
+                <button class="btn btn-secondary btn-block flex items-center justify-center gap-2" style="background:#fc7422; color:white; border-color:#fc7422" onclick="connectWeb3Wallet('solflare')">
+                    ☀️ Solflare
+                </button>
+                <button class="btn btn-secondary btn-block flex items-center justify-center gap-2" style="background:#551b8c; color:white; border-color:#551b8c" onclick="connectWeb3Wallet('phantom')">
+                    👻 Phantom
+                </button>
+            </div>
+            <button class="btn btn-ghost btn-block mt-4" onclick="closeWalletModal()">Cancel</button>
+        </div>
+    </div>
 
     <script src="~/js/pwa.js" asp-append-version="true"></script>
     <script src="~/js/ui.js" asp-append-version="true"></script>

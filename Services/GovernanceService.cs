@@ -1,50 +1,67 @@
 using RepEngine.Models;
+using RepEngine.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace RepEngine.Services;
 
 public class GovernanceService
 {
     private readonly ReputationService _reputationService;
+    private readonly FairScoreService _fairScoreService;
+    private readonly RepEngineContext _context;
     private readonly ILogger<GovernanceService> _logger;
-    private static List<Proposal> _proposals = new(); // In-memory storage for demo
-    private static List<Vote> _votes = new();
-    private static int _nextProposalId = 1;
 
-    public GovernanceService(ReputationService reputationService, ILogger<GovernanceService> logger)
+    public GovernanceService(ReputationService reputationService, FairScoreService fairScoreService, RepEngineContext context, ILogger<GovernanceService> logger)
     {
         _reputationService = reputationService;
+        _fairScoreService = fairScoreService;
+        _context = context;
         _logger = logger;
-        InitializeSampleProposals();
     }
 
-    public async Task<Proposal> CreateProposalAsync(string creatorWallet, string title, string description, string category, int votingDurationDays)
+    public async Task<Proposal> CreateProposalAsync(string creatorWallet, string title, string description, string category, int votingDurationDays, string minimumTierToVote = "Unranked", int quorumRequired = 100)
     {
-        var canCreate = await _reputationService.CanCreateProposalAsync(creatorWallet, GetUserProposalsThisMonth(creatorWallet));
-        
+        var canCreate = await _reputationService.CanCreateProposalAsync(creatorWallet, await GetUserProposalsThisMonthAsync(creatorWallet));
+
         if (!canCreate)
             throw new InvalidOperationException("You don't have permission to create more proposals this month");
 
+        // Capture creator's FairScore
+        int fairScore = 0;
+        string tierName = "Unranked";
+        try
+        {
+            var scoreData = await _fairScoreService.GetScoreAsync(creatorWallet);
+            fairScore = scoreData.Score;
+            tierName = scoreData.Tier ?? "Unranked";
+        }
+        catch { }
+
         var proposal = new Proposal
         {
-            Id = _nextProposalId++,
             Title = title,
             Description = description,
             CreatorWallet = creatorWallet,
+            Category = category,
+            MinimumTierToVote = minimumTierToVote,
+            QuorumRequired = quorumRequired,
+            CreatorFairScore = fairScore,
+            CreatorTier = tierName,
             CreatedAt = DateTime.UtcNow,
             VotingEndsAt = DateTime.UtcNow.AddDays(votingDurationDays),
-            Status = "Active",
-            Category = category
+            Status = "Active"
         };
 
-        _proposals.Add(proposal);
-        _logger.LogInformation("Proposal {ProposalId} created by {Wallet}", proposal.Id, creatorWallet);
-        
+        _context.Proposals.Add(proposal);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Proposal {ProposalId} created by {Wallet} (FairScore: {Score})", proposal.Id, creatorWallet, fairScore);
         return proposal;
     }
 
     public async Task<Vote> CastVoteAsync(int proposalId, string voterWallet, bool inFavor)
     {
-        var proposal = _proposals.FirstOrDefault(p => p.Id == proposalId);
+        var proposal = await _context.Proposals.FirstOrDefaultAsync(p => p.Id == proposalId);
         if (proposal == null)
             throw new ArgumentException("Proposal not found");
 
@@ -55,10 +72,30 @@ public class GovernanceService
             throw new InvalidOperationException("Voting period has ended");
 
         // Check if user already voted
-        if (_votes.Any(v => v.ProposalId == proposalId && v.VoterWallet == voterWallet))
+        if (await _context.Votes.AnyAsync(v => v.ProposalId == proposalId && v.VoterWallet == voterWallet))
             throw new InvalidOperationException("You have already voted on this proposal");
 
+        // Check tier requirement for voting
+        if (proposal.MinimumTierToVote != "Unranked")
+        {
+            var canVote = await _reputationService.CanAccessFeatureAsync(voterWallet,
+                Enum.TryParse<TierLevel>(proposal.MinimumTierToVote, true, out var reqTier) ? reqTier : TierLevel.Unranked);
+            if (!canVote)
+                throw new InvalidOperationException($"Your tier must be at least {proposal.MinimumTierToVote} to vote on this proposal");
+        }
+
         var votingPower = await _reputationService.CalculateVotingPowerAsync(voterWallet);
+
+        // Capture voter's FairScore
+        int fairScore = 0;
+        string tierName = "Unranked";
+        try
+        {
+            var scoreData = await _fairScoreService.GetScoreAsync(voterWallet);
+            fairScore = scoreData.Score;
+            tierName = scoreData.Tier ?? "Unranked";
+        }
+        catch { }
 
         var vote = new Vote
         {
@@ -66,10 +103,12 @@ public class GovernanceService
             VoterWallet = voterWallet,
             InFavor = inFavor,
             VotingPower = (int)votingPower,
+            VoterFairScore = fairScore,
+            VoterTier = tierName,
             VotedAt = DateTime.UtcNow
         };
 
-        _votes.Add(vote);
+        _context.Votes.Add(vote);
 
         // Update proposal vote counts
         if (inFavor)
@@ -80,110 +119,93 @@ public class GovernanceService
         proposal.TotalVotingPower += (int)votingPower;
         proposal.TotalVoters++;
 
-        _logger.LogInformation("Vote cast on proposal {ProposalId} by {Wallet} with power {Power}", 
-            proposalId, voterWallet, votingPower);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Vote cast on proposal {ProposalId} by {Wallet} (FairScore: {Score}, Power: {Power})",
+            proposalId, voterWallet, fairScore, votingPower);
 
         return vote;
     }
 
-    public List<Proposal> GetActiveProposals()
+    public async Task<List<Proposal>> GetActiveProposalsAsync()
     {
-        UpdateProposalStatuses();
-        return _proposals.Where(p => p.Status == "Active").OrderByDescending(p => p.CreatedAt).ToList();
+        await UpdateProposalStatusesAsync();
+        return await _context.Proposals
+            .Where(p => p.Status == "Active")
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync();
     }
 
-    public List<Proposal> GetAllProposals()
+    public async Task<List<Proposal>> GetAllProposalsAsync()
     {
-        UpdateProposalStatuses();
-        return _proposals.OrderByDescending(p => p.CreatedAt).ToList();
+        await UpdateProposalStatusesAsync();
+        return await _context.Proposals
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync();
     }
 
-    public Proposal? GetProposal(int proposalId)
+    public async Task<Proposal?> GetProposalAsync(int proposalId)
     {
-        UpdateProposalStatuses();
-        return _proposals.FirstOrDefault(p => p.Id == proposalId);
+        await UpdateProposalStatusesAsync();
+        return await _context.Proposals.FirstOrDefaultAsync(p => p.Id == proposalId);
     }
 
-    public List<Vote> GetProposalVotes(int proposalId)
+    public async Task<List<Vote>> GetProposalVotesAsync(int proposalId)
     {
-        return _votes.Where(v => v.ProposalId == proposalId).OrderByDescending(v => v.VotedAt).ToList();
+        return await _context.Votes
+            .Where(v => v.ProposalId == proposalId)
+            .OrderByDescending(v => v.VotedAt)
+            .ToListAsync();
     }
 
-    public bool HasUserVoted(int proposalId, string walletAddress)
+    public async Task<bool> HasUserVotedAsync(int proposalId, string walletAddress)
     {
-        return _votes.Any(v => v.ProposalId == proposalId && v.VoterWallet == walletAddress);
+        return await _context.Votes.AnyAsync(v => v.ProposalId == proposalId && v.VoterWallet == walletAddress);
     }
 
-    private void UpdateProposalStatuses()
+    private async Task UpdateProposalStatusesAsync()
     {
-        foreach (var proposal in _proposals.Where(p => p.Status == "Active"))
+        var activeProposals = await _context.Proposals.Where(p => p.Status == "Active").ToListAsync();
+        bool changed = false;
+
+        foreach (var proposal in activeProposals)
         {
             if (DateTime.UtcNow > proposal.VotingEndsAt)
             {
-                // Determine if proposal passed (simple majority of voting power)
-                proposal.Status = proposal.VotesFor > proposal.VotesAgainst 
-                    ? "Passed" 
-                    : "Rejected";
+                // Check quorum
+                bool quorumMet = proposal.TotalVotingPower >= proposal.QuorumRequired;
+                if (!quorumMet)
+                {
+                    proposal.Status = "Rejected"; // No quorum
+                }
+                else
+                {
+                    proposal.Status = proposal.VotesFor > proposal.VotesAgainst ? "Passed" : "Rejected";
+                }
+                changed = true;
             }
         }
+
+        if (changed) await _context.SaveChangesAsync();
     }
 
-    private int GetUserProposalsThisMonth(string walletAddress)
+    private async Task<int> GetUserProposalsThisMonthAsync(string walletAddress)
     {
         var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
-        return _proposals.Count(p => p.CreatorWallet == walletAddress && p.CreatedAt >= startOfMonth);
+        return await _context.Proposals.CountAsync(p => p.CreatorWallet == walletAddress && p.CreatedAt >= startOfMonth);
     }
 
-    private void InitializeSampleProposals()
+    // ── Governance Stats ──────────────────────────────────────
+    public async Task<object> GetGovernanceStatsAsync()
     {
-        if (_proposals.Any()) return;
-
-        _proposals.Add(new Proposal
+        return new
         {
-            Id = _nextProposalId++,
-            Title = "Reduce Platform Fees by 2%",
-            Description = "Proposal to reduce the platform fee from 5% to 3% to attract more freelancers and clients.",
-            CreatorWallet = "Demo1...",
-            CreatedAt = DateTime.UtcNow.AddDays(-5),
-            VotingEndsAt = DateTime.UtcNow.AddDays(2),
-            Status = "Active",
-            Category = "Platform Economics",
-            VotesFor = 1250,
-            VotesAgainst = 340,
-            TotalVotingPower = 1590,
-            TotalVoters = 47
-        });
-
-        _proposals.Add(new Proposal
-        {
-            Id = _nextProposalId++,
-            Title = "Introduce Reputation Staking",
-            Description = "Allow users to stake tokens to boost their reputation score temporarily for important proposals or job applications.",
-            CreatorWallet = "Demo2...",
-            CreatedAt = DateTime.UtcNow.AddDays(-3),
-            VotingEndsAt = DateTime.UtcNow.AddDays(4),
-            Status = "Active",
-            Category = "Reputation System",
-            VotesFor = 890,
-            VotesAgainst = 560,
-            TotalVotingPower = 1450,
-            TotalVoters = 38
-        });
-
-        _proposals.Add(new Proposal
-        {
-            Id = _nextProposalId++,
-            Title = "Add Dispute Resolution System",
-            Description = "Implement a decentralized dispute resolution mechanism for job conflicts, with arbitrators selected based on reputation.",
-            CreatorWallet = "Demo3...",
-            CreatedAt = DateTime.UtcNow.AddDays(-1),
-            VotingEndsAt = DateTime.UtcNow.AddDays(6),
-            Status = "Active",
-            Category = "Platform Features",
-            VotesFor = 420,
-            VotesAgainst = 180,
-            TotalVotingPower = 600,
-            TotalVoters = 22
-        });
+            totalProposals = await _context.Proposals.CountAsync(),
+            activeProposals = await _context.Proposals.CountAsync(p => p.Status == "Active"),
+            passedProposals = await _context.Proposals.CountAsync(p => p.Status == "Passed"),
+            totalVotes = await _context.Votes.CountAsync(),
+            totalVotingPower = await _context.Votes.SumAsync(v => v.VotingPower),
+            uniqueVoters = await _context.Votes.Select(v => v.VoterWallet).Distinct().CountAsync()
+        };
     }
 }

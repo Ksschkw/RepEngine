@@ -13,11 +13,27 @@
         <div id="connectPrompt" class="card text-center" style="padding:2.5rem 1rem;">
             <h2 class="mb-2">Connect Your Wallet</h2>
             <p class="text-muted mb-4">Connect your wallet to view your reputation dashboard</p>
-            <button class="btn btn-primary" onclick="promptWalletConnection()">Connect Wallet</button>
+            <button class="btn btn-primary" onclick="window.walletManager.promptWalletConnection()">Connect Wallet</button>
         </div>
 
         <!-- Dashboard Content (hidden until wallet connected) -->
         <div id="dashboardContent" style="display:none;">
+
+            <!-- Tabs Navigation -->
+            <div class="tabs mb-4 flex flex-wrap border-b gap-0" style="border-color: rgba(255,255,255,0.1);">
+                <button class="tab-btn active px-4 py-2" onclick="switchTab('reputation')" id="tabBtn-reputation">Reputation</button>
+                <button class="tab-btn px-4 py-2" onclick="switchTab('mygigs')" id="tabBtn-mygigs">My Gigs</button>
+                <button class="tab-btn px-4 py-2" onclick="switchTab('applications')" id="tabBtn-applications">Applications</button>
+                <button class="tab-btn px-4 py-2" onclick="switchTab('contracts')" id="tabBtn-contracts">Contracts</button>
+                <button class="tab-btn px-4 py-2" onclick="switchTab('reviews')" id="tabBtn-reviews">Reviews</button>
+                <button class="tab-btn px-4 py-2" onclick="switchTab('notifications')" id="tabBtn-notifications">
+                    Notifications <span id="notifBadge" class="badge badge-danger" style="display:none; font-size:0.65rem; padding:0.15rem 0.4rem; margin-left:4px;">0</span>
+                </button>
+                <button class="tab-btn px-4 py-2" onclick="switchTab('dao')" id="tabBtn-dao">DAO</button>
+            </div>
+
+            <!-- Reputation Tab Content -->
+            <div id="tabContent-reputation" class="tab-pane active fade-in">
 
             <!-- Score Overview -->
             <div class="card mb-4">
@@ -91,11 +107,446 @@
                 <h3 class="mb-3">💡 How to Improve</h3>
                 <div id="dashSuggestions"></div>
             </div>
-        </div>
+
+            </div> <!-- End Reputation Tab -->
+
+            <!-- My Gigs Tab -->
+            <div id="tabContent-mygigs" class="tab-pane fade-in" style="display:none;">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl">Jobs I've Posted</h2>
+                    <a href="/PostJob" class="btn btn-primary text-sm">+ Post New Job</a>
+                </div>
+                <div class="flex flex-col gap-4" id="clientJobsContainer">
+                    <div class="card flex flex-col items-center justify-center" style="padding: 3rem 1rem; min-height: 200px;">
+                        <div class="spinner mb-3"></div>
+                        <p class="loading-text">Loading your posted jobs...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Applications Tab -->
+            <div id="tabContent-applications" class="tab-pane fade-in" style="display:none;">
+                <h2 class="text-xl mb-4">My Freelance Applications</h2>
+                <div class="flex flex-col gap-4" id="freelancerAppsContainer">
+                    <div class="card flex flex-col items-center justify-center" style="padding: 3rem 1rem; min-height: 200px;">
+                        <div class="spinner mb-3"></div>
+                        <p class="loading-text">Loading your applications...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contracts Tab -->
+            <div id="tabContent-contracts" class="tab-pane fade-in" style="display:none;">
+                <h2 class="text-xl mb-4">My Contracts</h2>
+                <div class="flex flex-col gap-4" id="contractsContainer">
+                    <div class="card flex flex-col items-center justify-center" style="padding: 3rem 1rem; min-height: 200px;">
+                        <div class="spinner mb-3"></div>
+                        <p class="loading-text">Loading contracts...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reviews Tab -->
+            <div id="tabContent-reviews" class="tab-pane fade-in" style="display:none;">
+                <h2 class="text-xl mb-4">My Reviews</h2>
+                <div class="flex flex-col gap-4" id="reviewsContainer">
+                    <div class="card flex flex-col items-center justify-center" style="padding: 3rem 1rem; min-height: 200px;">
+                        <div class="spinner mb-3"></div>
+                        <p class="loading-text">Loading reviews...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications Tab -->
+            <div id="tabContent-notifications" class="tab-pane fade-in" style="display:none;">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl">Notifications</h2>
+                    <button class="btn btn-secondary btn-sm" onclick="markAllRead()">✓ Mark All Read</button>
+                </div>
+                <div class="flex flex-col gap-3" id="notificationsContainer">
+                    <div class="card flex flex-col items-center justify-center" style="padding: 3rem 1rem; min-height: 200px;">
+                        <div class="spinner mb-3"></div>
+                        <p class="loading-text">Loading notifications...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DAO Governance Tab -->
+            <div id="tabContent-dao" class="tab-pane fade-in" style="display:none;">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl">Active Governance Proposals</h2>
+                    <a href="/Governance" class="btn btn-primary btn-sm">View All →</a>
+                </div>
+                <div id="daoProposalsContainer" class="flex flex-col gap-3">
+                    <div class="card text-center text-muted" style="padding: 3rem 1rem;">
+                        <p>Loading proposals...</p>
+                    </div>
+                </div>
+            </div>
+
+        </div> <!-- End Dashboard Content -->
     </div>
 </section>
 
 <script>
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-pane').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    
+    const container = document.getElementById(`tabContent-${tabId}`);
+    if(container) container.style.display = 'block';
+    const btn = document.getElementById(`tabBtn-${tabId}`);
+    if(btn) btn.classList.add('active');
+
+    const wallet = window.walletManager?.getCurrentWallet?.();
+    if (wallet) {
+        if (tabId === 'mygigs') loadClientJobs(wallet);
+        else if (tabId === 'applications') loadFreelancerApps(wallet);
+        else if (tabId === 'contracts') loadContracts(wallet);
+        else if (tabId === 'reviews') loadReviews(wallet);
+        else if (tabId === 'notifications') loadNotifications(wallet);
+        else if (tabId === 'dao') loadDaoProposals();
+    }
+}
+
+// ── Client Jobs ───────────────────────────────────────────
+async function loadClientJobs(wallet) {
+    const container = document.getElementById('clientJobsContainer');
+    try {
+        const res = await fetch(`/api/jobs/all`);
+        const allJobs = await res.json();
+        const myJobs = allJobs.filter(j => j.clientWallet === wallet);
+        
+        if (myJobs.length === 0) {
+            container.innerHTML = `<div class="card text-center text-muted" style="padding:2rem;"><p>You haven't posted any jobs yet.</p><a href="/PostJob" class="btn btn-primary btn-sm mt-3">Post Your First Gig</a></div>`;
+            return;
+        }
+
+        container.innerHTML = myJobs.map(job => `
+            <div class="card card-interactive cursor-default">
+                <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                    <h4 class="text-primary text-lg">${job.title}</h4>
+                    <div class="flex gap-2">
+                        <span class="badge ${job.status === 'Open' ? 'badge-primary' : (job.status === 'In Progress' ? 'badge-warning' : 'badge-success')}">${job.status}</span>
+                        <span class="badge" style="font-size:0.65rem;">${job.category||''}</span>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-4 text-sm text-muted mb-3">
+                    <span><strong class="text-primary">$${job.budget?.toLocaleString()}</strong> ${job.budgetType === 'Hourly' ? '/hr' : ''}</span>
+                    <span><strong class="text-primary">${job.applicationCount}</strong> Applicants</span>
+                    <span>${new Date(job.postedAt).toLocaleDateString()}</span>
+                    <span class="tier-badge tier-${(job.minimumTierRequired||'unranked').toLowerCase()}" style="font-size:0.6rem; padding:0.1rem 0.4rem; border-width:1px;">Min: ${job.minimumTierRequired}</span>
+                </div>
+                
+                <button class="btn btn-secondary btn-sm" onclick="toggleApplicants(${job.id}, '${wallet}')" ${job.applicationCount === 0 ? 'disabled style="opacity:0.5"' : ''}>
+                    ${job.applicationCount > 0 ? '👥 View Applicants (' + job.applicationCount + ')' : 'No Applicants Yet'}
+                </button>
+                
+                <div id="applicants-${job.id}" class="mt-4 flex flex-col gap-2" style="display:none;"></div>
+            </div>
+        `).join('');
+    } catch(err) {
+        container.innerHTML = `<div class="card text-center text-danger"><p>Error: ${err.message}</p><button class="btn btn-secondary btn-sm mt-2" onclick="loadClientJobs('${wallet}')">↻ Retry</button></div>`;
+    }
+}
+
+async function toggleApplicants(jobId, wallet) {
+    const container = document.getElementById(`applicants-${jobId}`);
+    if (container.style.display === 'flex') { container.style.display = 'none'; return; }
+    
+    container.style.display = 'flex';
+    container.innerHTML = `<div class="text-sm text-muted"><span class="spinner" style="display:inline-block; width:16px; height:16px; border-width:2px; vertical-align:middle; margin-right:8px;"></span> Loading...</div>`;
+    
+    try {
+        const res = await fetch(`/api/jobs/${jobId}/applications`);
+        const apps = await res.json();
+        
+        if (apps.length === 0) {
+            container.innerHTML = `<div class="p-3 rounded text-sm text-muted" style="background:var(--bg-secondary); border: 1px solid var(--border);">No applications found.</div>`;
+            return;
+        }
+        
+        container.innerHTML = apps.map(app => `
+            <div style="background:var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem;" class="mt-2 transition-all hover:border-hover flex flex-col gap-3">
+                <div class="flex flex-wrap items-center gap-2 mb-1">
+                    <strong class="text-primary">${app.freelancerWallet.substring(0,6)}...${app.freelancerWallet.substring(app.freelancerWallet.length-4)}</strong>
+                    <span class="badge ${app.status === 'Pending' ? 'badge-warning' : app.status === 'Shortlisted' ? 'badge-info' : app.status === 'Approved' ? 'badge-success' : 'badge-danger'}">${app.status}</span>
+                    <span class="tier-badge tier-${(app.freelancerTier || 'unranked').toLowerCase()}" style="font-size:0.65rem; padding:0.15rem 0.5rem; border-width:1px;">${app.freelancerTier || 'Unranked'}</span>
+                </div>
+
+                <!-- FairScore Display -->
+                <div style="background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.15); border-radius:8px; padding:0.75rem; display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                    <div style="font-size:0.75rem; color:var(--text-muted);">
+                        <span style="font-weight:700; font-size:1rem; color:var(--accent-primary);">${app.currentFairScore ?? app.fairScoreAtApplication}</span>
+                        <span> FairScore</span>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-muted);">
+                        At application: <strong>${app.fairScoreAtApplication}</strong>
+                    </div>
+                    ${app.portfolioLinks ? `<a href="${app.portfolioLinks}" target="_blank" style="font-size:0.7rem; color:var(--accent-primary);">📎 Portfolio</a>` : ''}
+                    <span style="font-size:0.7rem; color:var(--text-muted);">⏱ ${app.availability || 'Immediate'}</span>
+                </div>
+
+                <p class="text-sm text-muted" style="white-space: pre-wrap;">${app.coverLetter}</p>
+                <div class="text-sm flex flex-wrap gap-4">
+                    <span>Rate: <strong class="text-success">$${app.proposedRate?.toLocaleString()}</strong></span>
+                    <span>Delivery: <strong class="text-primary">${app.deliveryDays || 3} Days</strong></span>
+                </div>
+                ${app.status === 'Pending' ? `
+                    <div class="flex gap-2 mt-2">
+                        <button class="btn btn-success btn-sm" onclick="approveApp(${app.id}, '${wallet}')">✅ Hire</button>
+                        <button class="btn btn-secondary btn-sm" onclick="shortlistApp(${app.id}, '${wallet}')">⭐ Shortlist</button>
+                        <button class="btn btn-danger btn-sm" onclick="rejectApp(${app.id}, '${wallet}')">✕ Reject</button>
+                    </div>
+                ` : app.status === 'Shortlisted' ? `
+                    <div class="flex gap-2 mt-2">
+                        <button class="btn btn-success btn-sm" onclick="approveApp(${app.id}, '${wallet}')">✅ Hire</button>
+                        <button class="btn btn-danger btn-sm" onclick="rejectApp(${app.id}, '${wallet}')">✕ Reject</button>
+                    </div>
+                ` : ``}
+            </div>
+        `).join('');
+        
+    } catch (e) {
+         container.innerHTML = `<div class="text-danger text-sm">Failed to load applicants</div>`;
+    }
+}
+
+async function approveApp(appId, wallet) {
+    if (!confirm("Approve this application and create a contract?")) return;
+    try {
+        const res = await fetch(`/api/jobs/applications/${appId}/approve`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clientWallet: wallet }) });
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+        showNotification('Freelancer hired! Contract created. 🎉', 'success');
+        loadClientJobs(wallet);
+    } catch (e) { showNotification(e.message, 'error'); }
+}
+
+async function shortlistApp(appId, wallet) {
+    try {
+        const res = await fetch(`/api/jobs/applications/${appId}/shortlist`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clientWallet: wallet }) });
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+        showNotification('Applicant shortlisted! ⭐', 'success');
+        loadClientJobs(wallet);
+    } catch (e) { showNotification(e.message, 'error'); }
+}
+
+async function rejectApp(appId, wallet) {
+    try {
+        const res = await fetch(`/api/jobs/applications/${appId}/reject`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clientWallet: wallet }) });
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+        showNotification('Application rejected.', 'info');
+        loadClientJobs(wallet);
+    } catch (e) { showNotification(e.message, 'error'); }
+}
+
+// ── Freelancer Apps ──────────────────────────────────────
+async function loadFreelancerApps(wallet) {
+    const container = document.getElementById('freelancerAppsContainer');
+    try {
+        const res = await fetch(`/api/jobs/applications?wallet=${encodeURIComponent(wallet)}`);
+        const apps = await res.json();
+        
+        if (!apps || apps.length === 0) {
+            container.innerHTML = `<div class="card text-center text-muted" style="padding:2rem;"><p>You haven't applied to any jobs yet.</p><a href="/Marketplace" class="btn btn-primary btn-sm mt-3">Browse Gigs</a></div>`;
+            return;
+        }
+
+        container.innerHTML = apps.map(app => `
+            <div class="card card-interactive cursor-default">
+                <div class="flex justify-between items-center mb-2">
+                    <h4 class="text-primary text-lg">${app.job?.title || 'Job #' + app.jobId}</h4>
+                    <span class="badge ${app.status === 'Pending' ? 'badge-warning' : app.status === 'Shortlisted' ? 'badge-info' : app.status === 'Approved' ? 'badge-success' : 'badge-danger'}">${app.status}</span>
+                </div>
+                <div class="flex flex-wrap gap-4 text-sm text-muted mb-2">
+                    <span>Proposed: <strong class="text-primary">$${app.proposedRate?.toLocaleString()}</strong></span>
+                    <span>Delivery: <strong>${app.deliveryDays}d</strong></span>
+                    <span>Applied: ${new Date(app.appliedAt).toLocaleDateString()}</span>
+                    <span>FairScore at Apply: <strong class="text-primary">${app.fairScoreAtApplication}</strong></span>
+                </div>
+                <p class="text-sm text-muted" style="border-top:1px solid var(--border); padding-top:.75rem; margin-top:.5rem;">
+                    <em>" ${app.coverLetter.substring(0, 120)}${app.coverLetter.length > 120 ? '...' : ''} "</em>
+                </p>
+            </div>
+        `).join('');
+
+    } catch(err) {
+        container.innerHTML = `<div class="card text-center text-danger"><p>Error: ${err.message}</p></div>`;
+    }
+}
+
+// ── Contracts ────────────────────────────────────────────
+async function loadContracts(wallet) {
+    const container = document.getElementById('contractsContainer');
+    try {
+        const res = await fetch(`/api/contracts?wallet=${encodeURIComponent(wallet)}`);
+        const contracts = await res.json();
+        
+        if (!contracts || contracts.length === 0) {
+            container.innerHTML = `<div class="card text-center text-muted" style="padding:2rem;"><p>No contracts yet. Hire a freelancer or get hired to create one!</p></div>`;
+            return;
+        }
+
+        container.innerHTML = contracts.map(c => {
+            const isClient = c.clientWallet === wallet;
+            const otherParty = isClient ? c.freelancerWallet : c.clientWallet;
+            const shortOther = otherParty.substring(0,6) + '...' + otherParty.substring(otherParty.length-4);
+            return `
+            <div class="card card-interactive cursor-default border-l-4" style="border-left-color: ${c.status === 'Active' ? 'var(--accent-primary)' : c.status === 'Completed' ? 'var(--accent-success)' : 'var(--accent-danger)'}">
+                <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
+                    <h4 class="text-primary text-lg">${c.job?.title || 'Contract #' + c.id}</h4>
+                    <span class="badge ${c.status === 'Active' ? 'badge-primary' : c.status === 'Completed' ? 'badge-success' : 'badge-danger'}">${c.status}</span>
+                </div>
+                <div class="flex flex-wrap gap-4 text-sm text-muted mb-3">
+                    <span>Role: <strong class="text-primary">${isClient ? '👔 Client' : '💻 Freelancer'}</strong></span>
+                    <span>${isClient ? 'Freelancer' : 'Client'}: <strong class="text-primary">${shortOther}</strong></span>
+                    <span>Amount: <strong class="text-success">$${c.agreedAmount?.toLocaleString()}</strong></span>
+                    <span>Fee: <strong>${(c.platformFee * 100).toFixed(1)}%</strong></span>
+                    <span>Started: ${new Date(c.startDate).toLocaleDateString()}</span>
+                    ${c.deadlineDate ? `<span>Deadline: ${new Date(c.deadlineDate).toLocaleDateString()}</span>` : ''}
+                </div>
+                ${c.status === 'Active' && isClient ? `
+                    <div class="flex gap-2">
+                        <button class="btn btn-success btn-sm" onclick="completeContract(${c.id}, '${wallet}')">✅ Mark Complete</button>
+                    </div>
+                ` : c.status === 'Completed' ? `
+                    <button class="btn btn-secondary btn-sm" onclick="openReviewModal(${c.id})">⭐ Leave Review</button>
+                ` : ''}
+            </div>`;
+        }).join('');
+    } catch(err) {
+        container.innerHTML = `<div class="card text-center text-danger"><p>Error: ${err.message}</p></div>`;
+    }
+}
+
+async function completeContract(contractId, wallet) {
+    if (!confirm("Mark this contract as completed?")) return;
+    try {
+        const res = await fetch(`/api/contracts/${contractId}/complete`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clientWallet: wallet }) });
+        if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
+        showNotification('Contract completed! 🎉 Don\'t forget to leave a review.', 'success');
+        loadContracts(wallet);
+    } catch(e) { showNotification(e.message, 'error'); }
+}
+
+// ── Reviews ──────────────────────────────────────────────
+async function loadReviews(wallet) {
+    const container = document.getElementById('reviewsContainer');
+    try {
+        const res = await fetch(`/api/reviews?wallet=${encodeURIComponent(wallet)}`);
+        const reviews = await res.json();
+        
+        if (!reviews || reviews.length === 0) {
+            container.innerHTML = `<div class="card text-center text-muted" style="padding:2rem;"><p>No reviews yet. Complete a contract to receive reviews!</p></div>`;
+            return;
+        }
+
+        container.innerHTML = reviews.map(r => `
+            <div class="card">
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex items-center gap-2">
+                        <span style="font-size:1.25rem;">${'⭐'.repeat(r.rating)}</span>
+                        <strong>${r.rating}/5</strong>
+                    </div>
+                    <span class="text-xs text-muted">${new Date(r.createdAt).toLocaleDateString()}</span>
+                </div>
+                <p class="text-sm mb-3">${r.comment}</p>
+                <div class="flex flex-wrap gap-3 text-xs text-muted">
+                    <span>Communication: ${'⭐'.repeat(r.communication)}</span>
+                    <span>Quality: ${'⭐'.repeat(r.quality)}</span>
+                    <span>Timeliness: ${'⭐'.repeat(r.timeliness)}</span>
+                    <span>Professionalism: ${'⭐'.repeat(r.professionalism)}</span>
+                </div>
+                <div class="text-xs text-muted mt-2">
+                    From: ${r.reviewerRole} (FairScore: ${r.reviewerFairScore})
+                </div>
+            </div>
+        `).join('');
+    } catch(err) {
+        container.innerHTML = `<div class="card text-center text-danger"><p>Error: ${err.message}</p></div>`;
+    }
+}
+
+// ── Notifications ────────────────────────────────────────
+async function loadNotifications(wallet) {
+    const container = document.getElementById('notificationsContainer');
+    try {
+        const res = await fetch(`/api/notifications?wallet=${encodeURIComponent(wallet)}`);
+        const notifs = await res.json();
+        
+        if (!notifs || notifs.length === 0) {
+            container.innerHTML = `<div class="card text-center text-muted" style="padding:2rem;"><p>No notifications yet.</p></div>`;
+            return;
+        }
+
+        const unreadCount = notifs.filter(n => !n.isRead).length;
+        const badge = document.getElementById('notifBadge');
+        if (unreadCount > 0) { badge.style.display = 'inline'; badge.textContent = unreadCount; }
+        else { badge.style.display = 'none'; }
+
+        container.innerHTML = notifs.map(n => `
+            <div class="card card-interactive" style="padding:1rem; opacity:${n.isRead ? '0.7' : '1'}; border-left:3px solid ${n.isRead ? 'transparent' : 'var(--accent-primary)'};">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <strong class="text-sm">${n.title}</strong>
+                        <p class="text-xs text-muted mt-1">${n.body}</p>
+                    </div>
+                    <span class="text-xs text-muted">${getTimeAgo(new Date(n.createdAt))}</span>
+                </div>
+            </div>
+        `).join('');
+    } catch(err) {
+        container.innerHTML = `<div class="card text-center text-danger"><p>Error: ${err.message}</p></div>`;
+    }
+}
+
+async function markAllRead() {
+    const wallet = window.walletManager?.getCurrentWallet?.();
+    if (!wallet) return;
+    await fetch('/api/notifications/read', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ walletAddress: wallet }) });
+    document.getElementById('notifBadge').style.display = 'none';
+    loadNotifications(wallet);
+}
+
+function getTimeAgo(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+    if (seconds < 60) return 'Now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    return `${days}d`;
+}
+
+// ── DAO Proposals ────────────────────────────────────────
+async function loadDaoProposals() {
+    const container = document.getElementById('daoProposalsContainer');
+    try {
+        const res = await fetch('/api/governance/proposals/active');
+        const proposals = await res.json();
+        if (!proposals || proposals.length === 0) {
+            container.innerHTML = `<div class="card text-center text-muted" style="padding:2rem;"><p>No active proposals</p><a href="/Governance" class="btn btn-primary btn-sm mt-3">Go to Governance</a></div>`;
+            return;
+        }
+        container.innerHTML = proposals.slice(0, 5).map(p => {
+            const total = p.votesFor + p.votesAgainst || 1;
+            const pct = ((p.votesFor / total) * 100).toFixed(0);
+            return `
+            <div class="card card-interactive">
+                <div class="flex justify-between items-center mb-1">
+                    <h4 style="margin:0; font-size:0.95rem;">${p.title}</h4>
+                    <span class="text-xs text-muted">${p.totalVoters} voters</span>
+                </div>
+                <div class="vote-bar mt-2" style="height:6px;"><div class="vote-bar-fill" style="width:${pct}%;height:6px;"></div></div>
+                <div class="text-xs text-muted mt-1">${pct}% for · ${p.totalVotingPower} power</div>
+            </div>`;
+        }).join('');
+    } catch(e) { container.innerHTML = `<div class="text-muted text-sm">Failed to load</div>`; }
+}
+
+// ── Dashboard Load ───────────────────────────────────────
 window.addEventListener('walletConnected', e => loadDashboard(e.detail.wallet));
 document.addEventListener('DOMContentLoaded', () => {
     const w = window.walletManager?.getCurrentWallet?.();
@@ -106,33 +557,36 @@ async function loadDashboard(wallet) {
     document.getElementById('connectPrompt').style.display = 'none';
     document.getElementById('dashboardContent').style.display = 'block';
 
+    // Load unread notifications count
+    try {
+        const notifRes = await fetch(`/api/notifications?wallet=${encodeURIComponent(wallet)}&unreadOnly=true`);
+        const unread = await notifRes.json();
+        const badge = document.getElementById('notifBadge');
+        if (unread.length > 0) { badge.style.display = 'inline'; badge.textContent = unread.length; }
+    } catch {}
+
     try {
         const res = await fetch(`/api/fairscore?wallet=${encodeURIComponent(wallet)}`);
         const d = await res.json();
         const score = d.score ?? Math.min(100, Math.round(d.fairscore ?? 0));
         const tierName = d.tier?.name ?? d.tier ?? 'Unranked';
 
-        // Gauge
         document.getElementById('dashScore').textContent = score;
         document.getElementById('dashGauge').style.setProperty('--score-angle', `${(score/100)*360}deg`);
 
-        // Tier
         const tierEl = document.getElementById('dashTier');
         const icons = { unranked:'⚪', bronze:'🥉', silver:'🥈', gold:'🥇', platinum:'💎', diamond:'💠' };
         tierEl.className = `tier-badge tier-${tierName.toLowerCase()}`;
         tierEl.textContent = `${icons[tierName.toLowerCase()]||'⚪'} ${tierName.charAt(0).toUpperCase()+tierName.slice(1)}`;
 
-        // Voting power
         const vp = { unranked:.5, bronze:1, silver:1.5, gold:2, platinum:3, diamond:5 };
         document.getElementById('dashVotingPower').textContent = `${vp[tierName.toLowerCase()]||1}×`;
 
-        // Stats
         const f = d.features ?? {};
         document.getElementById('dashTxCount').textContent = (f.txCount??0).toLocaleString();
         document.getElementById('dashActiveDays').textContent = f.activeDays ?? 0;
         document.getElementById('dashWalletAge').textContent = f.walletAgeDays ?? 0;
 
-        // Sub-scores
         const base = d.fairscoreBase ?? 0;
         const social = d.socialScore ?? 0;
         document.getElementById('dashBaseScore').textContent = base.toFixed(1);
@@ -140,14 +594,12 @@ async function loadDashboard(wallet) {
         document.getElementById('dashBaseBar').style.width = `${Math.min(100, base)}%`;
         document.getElementById('dashSocialBar').style.width = `${Math.min(100, social)}%`;
 
-        // Badges
         const badges = d.badges ?? [];
         const badgeEl = document.getElementById('dashBadges');
         badgeEl.innerHTML = badges.length
             ? badges.map(b => `<span class="badge badge-primary">🏅 ${b.label}</span>`).join('')
             : '<span class="text-muted text-sm">No badges yet</span>';
 
-        // Metrics
         const metrics = [
             { label: 'LST Percentile', value: ((f.lstPercentileScore??0)*100).toFixed(0)+'%' },
             { label: 'Major Holdings',  value: ((f.majorPercentileScore??0)*100).toFixed(0)+'%' },
@@ -158,13 +610,13 @@ async function loadDashboard(wallet) {
             `<div class="stat-card"><div class="stat-value">${m.value}</div><div class="stat-label">${m.label}</div></div>`
         ).join('');
 
-        // Suggestions
         const sugRes = await fetch(`/api/dashboard?wallet=${encodeURIComponent(wallet)}`);
         const sugData = await sugRes.json();
         const tips = sugData.suggestions ?? [];
         document.getElementById('dashSuggestions').innerHTML = tips.length
             ? tips.map(s => `<p class="text-sm mb-2">${s}</p>`).join('')
             : '<p class="text-sm text-muted">You\'re doing great!</p>';
+
     } catch (e) {
         console.error('Dashboard load error:', e);
     }

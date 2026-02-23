@@ -1,18 +1,20 @@
 // RepEngine Service Worker — PWA offline support
-const CACHE_NAME = 'repengine-v2';
-const API_CACHE = 'repengine-api-v2';
+const CACHE_NAME = 'repengine-v4';
+const API_CACHE = 'repengine-api-v4';
 
 const STATIC_ASSETS = [
     '/',
     '/Index',
     '/Dashboard',
     '/Governance',
-    '/Jobs',
+    '/PostJob',
+    '/Marketplace',
     '/Offline',
     '/css/site.css',
     '/js/site.js',
     '/js/wallet.js',
     '/js/pwa.js',
+    '/js/ui.js',
     '/manifest.json',
     '/icons/icon-192x192.png',
     '/icons/icon-512x512.png',

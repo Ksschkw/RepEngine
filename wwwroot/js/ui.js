@@ -74,10 +74,92 @@ class UiManager {
                 border-color: var(--accent-primary);
             }
 
+            .ui-notification-container {
+                position: fixed;
+                bottom: 80px;
+                right: 20px;
+                z-index: 10001;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .ui-notification {
+                background: var(--bg-secondary);
+                border: 1px solid var(--border);
+                border-left: 4px solid var(--accent-primary);
+                border-radius: var(--radius-md);
+                padding: 1rem 1.25rem;
+                color: var(--text-primary);
+                box-shadow: var(--shadow-lg);
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                min-width: 300px;
+                max-width: 400px;
+                animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+
+            .ui-notification.error { border-left-color: var(--accent-danger); }
+            .ui-notification.success { border-left-color: var(--accent-success); }
+            .ui-notification.warning { border-left-color: var(--accent-warning); }
+
+            .ui-notification-close {
+                margin-left: auto;
+                cursor: pointer;
+                opacity: 0.6;
+                font-size: 1.25rem;
+            }
+            .ui-notification-close:hover { opacity: 1; }
+
+            @keyframes slideInRight { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+            @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
+
             @keyframes uiFadeIn { from { opacity: 0; } to { opacity: 1; } }
             @keyframes uiScaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         `;
         document.head.appendChild(style);
+    }
+
+    /**
+     * Shows a sliding toast notification.
+     * @param {string} message 
+     * @param {string} [type='info'] 'info', 'success', 'warning', 'error'
+     * @param {number} [duration=4000] 
+     */
+    showNotification(message, type = 'info', duration = 4000) {
+        let container = document.getElementById('ui-notification-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'ui-notification-container';
+            container.className = 'ui-notification-container';
+            document.body.appendChild(container);
+        }
+
+        const notification = document.createElement('div');
+        notification.className = `ui-notification ${type}`;
+        
+        let icon = 'ℹ️';
+        if (type === 'error') icon = '❌';
+        if (type === 'success') icon = '✅';
+        if (type === 'warning') icon = '⚠️';
+
+        notification.innerHTML = `
+            <span>${icon}</span>
+            <div style="flex:1; font-size:0.9rem; line-height:1.4;">${message}</div>
+            <span class="ui-notification-close" onclick="this.parentElement.remove()">&times;</span>
+        `;
+
+        container.appendChild(notification);
+
+        if (duration > 0) {
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+                setTimeout(() => {
+                    if (notification.parentNode) notification.remove();
+                }, 300);
+            }, duration);
+        }
     }
 
     /**
@@ -234,5 +316,4 @@ window.uiManager = new UiManager();
 
 // Optional: Override defaults (with warning)
 window.alert = (msg) => window.uiManager.alert(msg);
-// Note: confirm/prompt are async now, so we can't fully override them 1:1 without breaking sync code.
-// Ideally, we just use uiManager directly.
+window.showNotification = (msg, type, duration) => window.uiManager.showNotification(msg, type, duration);

@@ -1,9 +1,10 @@
 // PWA Utilities for RepEngine
 class PWAManager {
+    deferredPrompt = null;
+    isInstalled = false;
+    isOnline = navigator.onLine;
+
     constructor() {
-        this.deferredPrompt = null;
-        this.isInstalled = false;
-        this.isOnline = navigator.onLine;
         this.init();
     }
 
@@ -14,14 +15,14 @@ class PWAManager {
         }
 
         // Listen for install prompt
-        window.addEventListener('beforeinstallprompt', (e) => {
+        globalThis.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             this.deferredPrompt = e;
             this.showInstallButton();
         });
 
         // Check if already installed
-        window.addEventListener('appinstalled', () => {
+        globalThis.addEventListener('appinstalled', () => {
             console.log('[PWA] App installed successfully');
             this.isInstalled = true;
             this.hideInstallButton();
@@ -29,8 +30,8 @@ class PWAManager {
         });
 
         // Monitor online/offline status
-        window.addEventListener('online', () => this.handleOnline());
-        window.addEventListener('offline', () => this.handleOffline());
+        globalThis.addEventListener('online', () => this.handleOnline());
+        globalThis.addEventListener('offline', () => this.handleOffline());
 
         // Check for updates
         this.checkForUpdates();
@@ -67,9 +68,9 @@ class PWAManager {
 
             // Add to desktop nav if visible, otherwise fixed body for mobile
             const desktopNav = document.querySelector('.desktop-nav .dnav-links');
-            if (desktopNav && window.innerWidth >= 769) {
+            if (desktopNav && globalThis.innerWidth >= 769) {
                 const walletBtn = desktopNav.querySelector('.dnav-wallet');
-                if (walletBtn) desktopNav.insertBefore(installBtn, walletBtn);
+                if (walletBtn) walletBtn.before(installBtn);
                 else desktopNav.appendChild(installBtn);
             } else {
                 document.body.appendChild(installBtn);
@@ -122,10 +123,8 @@ class PWAManager {
     applyUpdate() {
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistration().then((registration) => {
-                if (registration && registration.waiting) {
-                    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-                    window.location.reload();
-                }
+                registration?.waiting?.postMessage({ type: 'SKIP_WAITING' });
+                globalThis.location.reload();
             });
         }
     }
@@ -196,7 +195,7 @@ class PWAManager {
 
     // Request persistent storage (optional)
     async requestPersistentStorage() {
-        if (navigator.storage && navigator.storage.persist) {
+        if (navigator.storage?.persist) {
             const isPersisted = await navigator.storage.persist();
             console.log(`[PWA] Persistent storage: ${isPersisted}`);
             return isPersisted;
@@ -240,4 +239,4 @@ style.textContent = `
 document.head.appendChild(style);
 
 // Export for global use
-window.pwaManager = pwaManager;
+globalThis.pwaManager = pwaManager;
