@@ -36,12 +36,18 @@ async function detectProviders() {
 document.addEventListener('DOMContentLoaded', () => {
     detectProviders();
 
-    // Check URL for wallet connection callback (from deep link return)
-    handleDeepLinkReturn();
-
     const savedWallet = localStorage.getItem('connectedWallet');
     if (savedWallet) {
         setWalletConnectedState(savedWallet);
+        return; // Already connected, skip auto-connect
+    }
+
+    // KEY FIX: If we are ALREADY inside a wallet's in-app browser,
+    // auto-connect immediately. This is what triggers the sign prompt.
+    // Solflare/Phantom open your URL in their browser, injecting window.solflare
+    // or window.phantom. We detect this and auto-connect.
+    if (isInAppBrowser()) {
+        autoConnectInAppBrowser();
     }
 
     // Mobile top-bar button
@@ -138,14 +144,58 @@ function closeWalletModal() {
     }
 }
 
-// ── Mobile deep-link URLs ──────────────────────────────
-// Both Phantom and Solflare support universal links that open their
-// in-app browser pointed at our dApp URL. The wallet then injects
-// its provider object, and we can call connect() normally.
+// ── Auto-connect when inside a wallet in-app browser ──────
+async function autoConnectInAppBrowser() {
+    // Wait a moment for the wallet provider to fully initialize
+    await new Promise(r => setTimeout(r, 800));
 
+    // Determine which wallet we're inside
+    let providerName = null;
+    if (window.solflare?.isSolflare) providerName = 'solflare';
+    else if (window.phantom?.solana?.isPhantom || window.solana?.isPhantom) providerName = 'phantom';
+
+    if (!providerName) return;
+
+    // Show a connecting overlay so the user sees something is happening
+    showInAppConnectingOverlay(providerName);
+
+    try {
+        await connectWeb3Wallet(providerName);
+    } finally {
+        removeInAppConnectingOverlay();
+    }
+}
+
+function showInAppConnectingOverlay(providerName) {
+    const existing = document.getElementById('inAppConnectingOverlay');
+    if (existing) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'inAppConnectingOverlay';
+    overlay.style.cssText = `
+        position: fixed; inset: 0; z-index: 99999;
+        background: rgba(10,14,26,0.97);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 1.5rem; backdrop-filter: blur(8px);
+    `;
+    overlay.innerHTML = `
+        <div style="font-size: 3rem;">${providerName === 'solflare' ? '☀️' : '👻'}</div>
+        <div style="color:white; font-size:1.1rem; font-weight:700;">Connecting to ${providerName === 'solflare' ? 'Solflare' : 'Phantom'}</div>
+        <div style="color:rgba(255,255,255,0.6); font-size:0.875rem; text-align:center; max-width:280px;">
+            Please approve the connection request within your wallet
+        </div>
+        <div class="spinner" style="width:32px; height:32px; border-width:3px;"></div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+function removeInAppConnectingOverlay() {
+    document.getElementById('inAppConnectingOverlay')?.remove();
+}
+
+// ── Mobile deep-link URLs ──────────────────────────────
 function buildDappUrl() {
-    // URL the wallet's in-app browser should open.
-    // Strip any hash/query from the current URL that might confuse things.
     const base = window.location.origin + window.location.pathname;
     return base;
 }
