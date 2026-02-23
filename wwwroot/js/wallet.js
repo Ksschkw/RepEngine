@@ -12,14 +12,11 @@ function isMobile() {
 }
 
 function isInAppBrowser() {
-    // Detect if we're inside a wallet's in-app browser
     return !!(window.phantom?.solana?.isPhantom || window.solflare?.isSolflare);
 }
 
 // ── Eager provider detection on page load ──────────────
 async function detectProviders() {
-    // Wallet extensions inject globals asynchronously.
-    // Poll for up to 3 seconds so providers are ready before user clicks.
     const maxAttempts = 30;
     for (let i = 0; i < maxAttempts; i++) {
         if (!_phantomProvider) {
@@ -37,10 +34,11 @@ async function detectProviders() {
 
 // ── Initialization ─────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-    // Start eager detection immediately (runs in background)
     detectProviders();
 
-    // Check if wallet was previously connected
+    // Check URL for wallet connection callback (from deep link return)
+    handleDeepLinkReturn();
+
     const savedWallet = localStorage.getItem('connectedWallet');
     if (savedWallet) {
         setWalletConnectedState(savedWallet);
@@ -70,7 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function showWalletMenu(anchor) {
-    // Remove existing menu
     const existing = document.getElementById('walletDropdownMenu');
     if (existing) { existing.remove(); return; }
 
@@ -84,7 +81,6 @@ function showWalletMenu(anchor) {
         animation: uiScaleUp 0.15s ease-out;
     `;
 
-    // Position near the anchor
     const rect = anchor.getBoundingClientRect();
     menu.style.top = (rect.bottom + 8) + 'px';
     menu.style.right = Math.max(8, window.innerWidth - rect.right) + 'px';
@@ -99,7 +95,7 @@ function showWalletMenu(anchor) {
            onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">
             📊 Dashboard
         </a>
-        <a href="/Dashboard" onclick="switchTab && switchTab('reputation')" style="display:flex; align-items:center; gap:8px; padding:0.6rem 1rem; border-radius:8px; text-decoration:none; color:var(--text-primary, #fff); font-size:0.875rem; transition:background 0.15s;"
+        <a href="/Dashboard" style="display:flex; align-items:center; gap:8px; padding:0.6rem 1rem; border-radius:8px; text-decoration:none; color:var(--text-primary, #fff); font-size:0.875rem; transition:background 0.15s;"
            onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">
             🏅 My FairScore
         </a>
@@ -143,19 +139,33 @@ function closeWalletModal() {
 }
 
 // ── Mobile deep-link URLs ──────────────────────────────
+// Both Phantom and Solflare support universal links that open their
+// in-app browser pointed at our dApp URL. The wallet then injects
+// its provider object, and we can call connect() normally.
+
+function buildDappUrl() {
+    // URL the wallet's in-app browser should open.
+    // Strip any hash/query from the current URL that might confuse things.
+    const base = window.location.origin + window.location.pathname;
+    return base;
+}
+
 function getMobileDeepLink(providerName) {
-    const dappUrl = encodeURIComponent(window.location.href);
+    const dappUrl = encodeURIComponent(buildDappUrl());
 
     if (providerName === 'phantom') {
-        // Phantom universal link — opens app or falls back to web
         return {
+            // Phantom v2 universal link for in-app browsing
             deepLink: `https://phantom.app/ul/browse/${dappUrl}`,
+            fallbackScheme: `phantom://browse/${dappUrl}`,
             appStoreIOS: 'https://apps.apple.com/app/phantom-crypto-wallet/id1598432977',
             appStoreAndroid: 'https://play.google.com/store/apps/details?id=app.phantom'
         };
     } else if (providerName === 'solflare') {
         return {
+            // Solflare universal link for in-app browsing
             deepLink: `https://solflare.com/ul/v1/browse/${dappUrl}`,
+            fallbackScheme: `solflare://ul/v1/browse/${dappUrl}`,
             appStoreIOS: 'https://apps.apple.com/app/solflare/id1580902717',
             appStoreAndroid: 'https://play.google.com/store/apps/details?id=com.solflare.mobile'
         };
@@ -167,19 +177,86 @@ function redirectToMobileWallet(providerName) {
     const links = getMobileDeepLink(providerName);
     if (!links) return;
 
-    // Try the universal deep-link first (opens the app's in-app browser).
-    // This works on both iOS and Android because both Phantom and Solflare
-    // have registered universal links for their domains.
-    window.location.href = links.deepLink;
+    // Mark that we are attempting a deep link so we can detect return
+    sessionStorage.setItem('walletDeepLinkAttempt', providerName);
+    sessionStorage.setItem('walletDeepLinkTime', Date.now().toString());
 
-    // If after 2 seconds nothing happened (app not installed),
-    // redirect to the appropriate app store.
+    // Use visibility API to detect if the wallet app actually opened.
+    // If the page becomes hidden (app opened), do NOT redirect to store.
+    let didLeave = false;
+
+    const onVisibilityChange = () => {
+        if (document.hidden) {
+            didLeave = true;
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+        }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    // Try the custom scheme first (more reliable on Android for installed apps).
+    // Then fall back to universal link.
+    const isAndroid = /Android/i.test(navigator.userAgent);
+
+    if (isAndroid && links.fallbackScheme) {
+        // On Android, use an intent that can gracefully fall back
+        window.location.href = links.fallbackScheme;
+    } else {
+        // On iOS or as primary attempt, use universal link
+        window.location.href = links.deepLink;
+    }
+
+    // Only redirect to store if the app didn't open (page stayed visible)
     setTimeout(() => {
-        // Check if we're still on this page (app didn't open)
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+
+        // If the user left the page (app opened), don't go to store
+        if (didLeave) return;
+
+        // If page is currently hidden (user switched to app), don't go to store
+        if (document.hidden) return;
+
+        // App didn't open — offer to install
         const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
         const storeUrl = isIOS ? links.appStoreIOS : links.appStoreAndroid;
-        window.location.href = storeUrl;
-    }, 2000);
+
+        if (typeof showNotification === 'function') {
+            showNotification(`${providerName === 'phantom' ? 'Phantom' : 'Solflare'} app not found. Redirecting to install...`, 'info');
+        }
+
+        // Small delay so notification is visible
+        setTimeout(() => {
+            window.location.href = storeUrl;
+        }, 800);
+    }, 2500);
+}
+
+// Handle return from a wallet deep link.
+// When the user opens Solflare/Phantom and then comes back to the browser,
+// we should try to detect their wallet provider if present.
+function handleDeepLinkReturn() {
+    const attempt = sessionStorage.getItem('walletDeepLinkAttempt');
+    const time = sessionStorage.getItem('walletDeepLinkTime');
+
+    if (!attempt || !time) return;
+
+    // Only act on recent attempts (within last 5 minutes)
+    const elapsed = Date.now() - parseInt(time);
+    if (elapsed > 5 * 60 * 1000) {
+        sessionStorage.removeItem('walletDeepLinkAttempt');
+        sessionStorage.removeItem('walletDeepLinkTime');
+        return;
+    }
+
+    // Clean up
+    sessionStorage.removeItem('walletDeepLinkAttempt');
+    sessionStorage.removeItem('walletDeepLinkTime');
+
+    // If we're now inside an in-app browser, auto-connect
+    if (isInAppBrowser()) {
+        setTimeout(() => {
+            connectWeb3Wallet(attempt);
+        }, 500);
+    }
 }
 
 // ── Main connection flow ───────────────────────────────
@@ -203,11 +280,11 @@ async function connectWeb3Wallet(providerName) {
 
         // ── Mobile path: deep-link to native wallet app ──
         if (isMobile() && !isInAppBrowser()) {
-            // Restore button *before* navigating away
             if (clickedBtn) {
                 clickedBtn.innerHTML = originalBtnHtml;
                 clickedBtn.disabled = false;
             }
+            closeWalletModal();
             redirectToMobileWallet(providerName);
             return;
         }
@@ -232,21 +309,38 @@ async function connectWeb3Wallet(providerName) {
             }
         }
 
+        // If still no provider and we're in an in-app browser, wait a bit longer
+        if (!provider && isInAppBrowser()) {
+            for (let i = 0; i < 20; i++) {
+                await new Promise(r => setTimeout(r, 200));
+                if (providerName === 'solflare' && window.solflare?.isSolflare) {
+                    provider = window.solflare; break;
+                } else if (providerName === 'phantom') {
+                    const p = window.phantom?.solana || window.solana;
+                    if (p?.isPhantom) { provider = p; break; }
+                }
+            }
+        }
+
         if (!provider) {
-            // No extension found on desktop — redirect to download page
             if (clickedBtn) {
                 clickedBtn.innerHTML = originalBtnHtml;
                 clickedBtn.disabled = false;
             }
 
-            if (providerName === 'solflare') {
-                window.open('https://solflare.com/download', '_blank');
-            } else if (providerName === 'phantom') {
-                window.open('https://phantom.app/download', '_blank');
-            }
-
-            if (typeof showNotification === 'function') {
-                showNotification(`${providerName === 'phantom' ? 'Phantom' : 'Solflare'} extension not detected. Please install it and refresh the page.`, 'warning');
+            if (isMobile()) {
+                // On mobile without provider = app not installed
+                redirectToMobileWallet(providerName);
+            } else {
+                // Desktop — open download page
+                if (providerName === 'solflare') {
+                    window.open('https://solflare.com/download', '_blank');
+                } else if (providerName === 'phantom') {
+                    window.open('https://phantom.app/download', '_blank');
+                }
+                if (typeof showNotification === 'function') {
+                    showNotification(`${providerName === 'phantom' ? 'Phantom' : 'Solflare'} extension not detected. Please install it and refresh the page.`, 'warning');
+                }
             }
             return;
         }
@@ -254,7 +348,6 @@ async function connectWeb3Wallet(providerName) {
         // 1. Connect
         const resp = await provider.connect();
 
-        // Safely extract public key
         let pubKeyObj = (resp && resp.publicKey) ? resp.publicKey : provider.publicKey;
         if (!pubKeyObj) {
             throw new Error("Wallet connected but public key could not be retrieved. Ensure it is unlocked.");
@@ -262,12 +355,12 @@ async function connectWeb3Wallet(providerName) {
 
         const address = typeof pubKeyObj.toString === 'function' ? pubKeyObj.toString() : String(pubKeyObj);
 
-        // Update button text to indicate we are waiting for signature
+        // Update button text
         if (clickedBtn) {
             clickedBtn.innerHTML = `<span class="spinner" style="display:inline-block; width:16px; height:16px; border-width:2px; vertical-align:middle; margin-right:8px; border-color:currentColor; border-right-color:transparent;"></span> Please Sign...`;
         }
 
-        // 2. Request cryptographically signed message to verify ownership
+        // 2. Request message signature to verify ownership
         const msg = `Sign this message to authenticate with RepEngine.\n\nTimestamp: ${Date.now()}`;
         const encodedMessage = new TextEncoder().encode(msg);
 
@@ -280,16 +373,22 @@ async function connectWeb3Wallet(providerName) {
         setWalletConnectedState(address);
         closeWalletModal();
 
+        if (typeof showNotification === 'function') {
+            showNotification('Wallet connected successfully! 🎉', 'success');
+        }
+
     } catch (err) {
         console.error("Wallet error:", err);
-        // Don't alert if the user simply cancelled the pop-up
         if (err.message && err.message.toLowerCase().includes("rejected")) {
             console.log("User rejected the request.");
+            if (typeof showNotification === 'function') {
+                showNotification('Connection cancelled.', 'info');
+            }
         } else {
             if (typeof showNotification === 'function') {
-                showNotification("Authentication failed: " + err.message, "error");
+                showNotification("Connection failed: " + err.message, "error");
             } else {
-                alert("Authentication failed: " + err.message);
+                alert("Connection failed: " + err.message);
             }
         }
     } finally {
@@ -304,7 +403,6 @@ function setWalletConnectedState(walletAddress) {
     currentWallet = walletAddress;
     localStorage.setItem('connectedWallet', walletAddress);
 
-    // Update mobile button
     const walletBtn = document.getElementById('walletConnectBtn');
     const walletBtnTxt = document.getElementById('walletBtnText');
     if (walletBtn && walletBtnTxt) {
@@ -312,7 +410,6 @@ function setWalletConnectedState(walletAddress) {
         walletBtnTxt.textContent = truncateAddress(walletAddress);
     }
 
-    // Update desktop button
     const desktopBtn = document.getElementById('walletConnectBtnDesktop');
     const desktopBtnTxt = document.getElementById('walletBtnTextDesktop');
     if (desktopBtn && desktopBtnTxt) {
@@ -344,6 +441,10 @@ function disconnectWallet() {
 
     window.dispatchEvent(new CustomEvent('walletDisconnected'));
     console.log('Wallet disconnected');
+
+    if (typeof showNotification === 'function') {
+        showNotification('Wallet disconnected.', 'info');
+    }
 }
 
 function truncateAddress(address) {
@@ -353,5 +454,5 @@ function truncateAddress(address) {
 
 function getCurrentWallet() { return currentWallet; }
 
-// Export globally for the shared context
+// Export globally
 window.walletManager = { getCurrentWallet, disconnectWallet, promptWalletConnection };
