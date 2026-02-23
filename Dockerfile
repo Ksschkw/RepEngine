@@ -21,5 +21,8 @@ COPY --from=build /app/publish .
 EXPOSE 8080
 ENV ASPNETCORE_URLS=http://+:8080
 
+# Force IPv4 to prevent SocketException when connecting to Supabase from Northflank
+ENV DOTNET_SYSTEM_NET_DISABLEIPV6=1
+
 # Run the app
 ENTRYPOINT ["dotnet", "RepEngine.dll"]
