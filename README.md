@@ -15,7 +15,7 @@ RepEngine is a production-ready, enterprise-grade gig marketplace and DAO govern
 > 
 > **Traction & Community Vote:** [\> RepEngine on Legends.fun FAIRathon <](https://www.legends.fun/products/9b106612-02fe-403a-90c0-63bb9e2c21da)
 > 
-> **Product Walkthrough Video:** [Insert YouTube/Loom Link Here]
+> **Product Walkthrough Video:** [\> Watch Demo on YouTube <](https://youtu.be/CjmJntGi6Xo?si=HAfUyytDWGBVTxWB)
 
 ![RepEngine App Preview](image.png)
 

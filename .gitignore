@@ -4,3 +4,4 @@ generate-icons.html
 *.ico
 # I am leaving this out for now because i haven't finished building, if i finish, i'll comment it out
 *.exe
+video_intro.html
