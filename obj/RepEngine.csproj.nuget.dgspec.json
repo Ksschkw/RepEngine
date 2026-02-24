@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\KOSISOCHUKWU\\Vscodecheckpoints\\RepEngine\\RepEngine.csproj": {}
+    "c:\\Users\\KOSISOCHUKWU\\Vscodecheckpoints\\RepEngine\\RepEngine.csproj": {}
   },
   "projects": {
-    "C:\\Users\\KOSISOCHUKWU\\Vscodecheckpoints\\RepEngine\\RepEngine.csproj": {
+    "c:\\Users\\KOSISOCHUKWU\\Vscodecheckpoints\\RepEngine\\RepEngine.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\KOSISOCHUKWU\\Vscodecheckpoints\\RepEngine\\RepEngine.csproj",
+        "projectUniqueName": "c:\\Users\\KOSISOCHUKWU\\Vscodecheckpoints\\RepEngine\\RepEngine.csproj",
         "projectName": "RepEngine",
-        "projectPath": "C:\\Users\\KOSISOCHUKWU\\Vscodecheckpoints\\RepEngine\\RepEngine.csproj",
+        "projectPath": "c:\\Users\\KOSISOCHUKWU\\Vscodecheckpoints\\RepEngine\\RepEngine.csproj",
         "packagesPath": "C:\\Users\\KOSISOCHUKWU\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\KOSISOCHUKWU\\Vscodecheckpoints\\RepEngine\\obj\\",
+        "outputPath": "c:\\Users\\KOSISOCHUKWU\\Vscodecheckpoints\\RepEngine\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\KOSISOCHUKWU\\AppData\\Roaming\\NuGet\\NuGet.Config"

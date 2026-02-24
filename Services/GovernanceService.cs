@@ -191,7 +191,7 @@ public class GovernanceService
 
     private async Task<int> GetUserProposalsThisMonthAsync(string walletAddress)
     {
-        var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+        var startOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         return await _context.Proposals.CountAsync(p => p.CreatorWallet == walletAddress && p.CreatedAt >= startOfMonth);
     }
 
